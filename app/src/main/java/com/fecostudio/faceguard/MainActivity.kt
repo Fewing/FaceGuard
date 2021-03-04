@@ -6,17 +6,19 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.hardware.camera2.CameraCharacteristics
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
-import com.fecostudio.faceguard.utils.YuvToRgbConverter
+import com.fecostudio.faceguard.utils.*
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
@@ -27,9 +29,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val REQUEST_CODE_PERMISSIONS = 10
     }
-
-    private var surfaceView: SurfaceView? = null
-    private var surfaceHolder: SurfaceHolder? = null
+    private lateinit var surfaceView: AutoFitSurfaceView
     private var cameraProvider: ProcessCameraProvider? = null
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var converter: YuvToRgbConverter
@@ -43,17 +43,32 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.
+        FLAG_KEEP_SCREEN_ON);   //保持屏幕常亮
         setContentView(R.layout.activity_main)
         // YuvToRgb converter.
         converter = YuvToRgbConverter(this)
 
         // Init views.
         surfaceView = findViewById(R.id.preview_surface_view)
-        surfaceHolder = surfaceView!!.holder
-        // The activity is locked to portrait mode. We only need to correct for sensor rotation.
-        //gpuImageView.rotation = 90F
-        //gpuImageView.setScaleType(GPUImage.ScaleType.CENTER_CROP)
+        surfaceView.holder.addCallback(object : SurfaceHolder.Callback {
+            override fun surfaceDestroyed(holder: SurfaceHolder) = Unit
+            override fun surfaceChanged(
+                    holder: SurfaceHolder,
+                    format: Int,
+                    width: Int,
+                    height: Int) = Unit
 
+            override fun surfaceCreated(holder: SurfaceHolder) {
+
+                // Selects appropriate preview size and configures view finder
+                Log.d("size", "Surface View size: ${surfaceView.width} x ${surfaceView.height}")
+                holder.setFixedSize(1080, 1080*surfaceView.height/surfaceView.width)
+
+                // To ensure that size is set, initialize camera in the view's thread
+                //surfaceView.post { initializeCamera() }
+            }
+        })
         // Camera permission needed for CameraX.
         requestPermissions(arrayOf(Manifest.permission.CAMERA), REQUEST_CODE_PERMISSIONS)
 
@@ -85,20 +100,17 @@ class MainActivity : AppCompatActivity() {
                             it.close()
                             val paint = Paint()
                             var matrix = Matrix()
-                            var offsetX = bitmap.height / 2
-                            var offsetY = bitmap.width / 2
-                            matrix.postTranslate(-offsetX.toFloat(), -offsetY.toFloat())
                             matrix.postRotate(90f)
-                            matrix.postTranslate(-200 + offsetX.toFloat(), -200 + offsetY.toFloat())
-                            val newCanvas = surfaceHolder!!.lockHardwareCanvas()
+                            matrix.postTranslate(bitmap.height.toFloat(),0f)
+                            val newCanvas = surfaceView.holder.lockHardwareCanvas()
                             newCanvas.drawBitmap(bitmap, matrix,paint)
                             for (face in faces){
                                 newCanvas.drawRect(face.boundingBox,paint)
                             }
                             newCanvas.save()
-                            surfaceHolder!!.unlockCanvasAndPost(newCanvas)
-                            val dur = System.currentTimeMillis() - start
-                            Log.i("time", "startCameraIfReady: "+dur+"ms")
+                            surfaceView.holder.unlockCanvasAndPost(newCanvas)
+                            val delayTime = System.currentTimeMillis() - start
+                            //Log.d("time", "startCameraIfReady: "+delayTime+"ms")
                         }
                         .addOnFailureListener { e ->
                             // Task failed with an exception
