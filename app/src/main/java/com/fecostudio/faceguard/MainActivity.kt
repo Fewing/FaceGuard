@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
         requestPermissions(arrayOf(Manifest.permission.CAMERA), REQUEST_CODE_PERMISSIONS)
 
         // Init CameraX.
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener(Runnable {
             cameraProvider = cameraProviderFuture.get()
             startCameraIfReady()
@@ -68,7 +68,7 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("UnsafeExperimentalUsageError")
     private fun startCameraIfReady() {
         if (!isPermissionsGranted() || cameraProvider == null) {
-            return;
+            return
         }
         val imageAnalysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).setTargetResolution(
                 Size(1080, 1920)
@@ -85,11 +85,11 @@ class MainActivity : AppCompatActivity() {
                             it.close()
                             val paint = Paint()
                             var matrix = Matrix()
-                            var offsetX = bitmap.height / 2;
-                            var offsetY = bitmap.width / 2;
-                            matrix.postTranslate(-offsetX.toFloat(), -offsetY.toFloat());
-                            matrix.postRotate(90f);
-                            matrix.postTranslate(-200 + offsetX.toFloat(), -200 + offsetY.toFloat());
+                            var offsetX = bitmap.height / 2
+                            var offsetY = bitmap.width / 2
+                            matrix.postTranslate(-offsetX.toFloat(), -offsetY.toFloat())
+                            matrix.postRotate(90f)
+                            matrix.postTranslate(-200 + offsetX.toFloat(), -200 + offsetY.toFloat())
                             val newCanvas = surfaceHolder!!.lockHardwareCanvas()
                             newCanvas.drawBitmap(bitmap, matrix,paint)
                             for (face in faces){
