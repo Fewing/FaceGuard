@@ -1,35 +1,29 @@
 package com.fecostudio.faceguard
 
 import android.Manifest
+import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.Paint
-import android.graphics.Rect
-import android.media.MediaCodec
 import android.media.MediaRecorder
 import android.media.MediaScannerConnection
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
 import android.view.*
-import android.webkit.MimeTypeMap
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import com.fecostudio.faceguard.utils.*
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import java.io.File
-import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.Executors
@@ -52,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     }
     private lateinit var surfaceView: SurfaceView
     private var cameraProvider: ProcessCameraProvider? = null
+    private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
     private val executor = Executors.newSingleThreadExecutor()
     /** File where the recording will be saved */
     private val outputFile: File by lazy { createFile(this, "mp4") }
@@ -170,7 +165,7 @@ class MainActivity : AppCompatActivity() {
                         }
             }
         })
-        cameraProvider!!.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, imageAnalysis)
+        cameraProvider!!.bindToLifecycle(this, lensFacing, imageAnalysis)
     }
 
     fun startRecord(view: View) {
@@ -207,5 +202,9 @@ class MainActivity : AppCompatActivity() {
             return  true
         }
         return false
+    }
+
+    fun switchCamera(view: View) {
+
     }
 }

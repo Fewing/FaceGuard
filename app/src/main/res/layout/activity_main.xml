@@ -16,6 +16,7 @@
   -->
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:background="@color/black"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -31,12 +32,24 @@
         android:foreground="@android:color/transparent" />
 
     <ImageButton
+        android:id="@+id/camera_switch_button"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_marginBottom="12dp"
+        android:layout_marginStart="12dp"
+        android:layout_gravity="bottom|left"
+        android:background="@drawable/ic_switch"
+        android:contentDescription="@string/switch_camera_button_alt"
+        android:onClick="switchCamera"
+        android:scaleType="fitCenter" />
+
+    <ImageButton
         android:id="@+id/capture_button"
         android:layout_width="96dp"
         android:layout_height="96dp"
         android:layout_gravity="bottom|center"
         android:scaleType="fitCenter"
-        android:background="@drawable/ic_shutter"
+        android:background="@drawable/ic_shutter_normal"
         android:onClick="startRecord"
         android:contentDescription="@string/capture" />
 
