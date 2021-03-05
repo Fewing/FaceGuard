@@ -19,7 +19,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.fecostudio.faceguard.utils.AutoFitSurfaceView
+    <SurfaceView
         android:id="@+id/preview_surface_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
@@ -37,6 +37,7 @@
         android:layout_gravity="bottom|center"
         android:scaleType="fitCenter"
         android:background="@drawable/ic_shutter"
+        android:onClick="startRecord"
         android:contentDescription="@string/capture" />
 
 </FrameLayout>
