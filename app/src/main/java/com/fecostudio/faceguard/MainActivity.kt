@@ -14,10 +14,12 @@ import android.os.Bundle
 import android.util.Log
 import android.util.Size
 import android.view.*
+import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.animation.doOnCancel
 import androidx.core.content.ContextCompat
 import com.fecostudio.faceguard.utils.*
 import com.google.mlkit.vision.common.InputImage
@@ -40,14 +42,17 @@ class MainActivity : AppCompatActivity() {
             val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.CHINA)
             val appContext = context.applicationContext
             val mediaDir = context.externalMediaDirs.firstOrNull()?.let {
-                File(it, appContext.resources.getString(R.string.app_name)).apply { mkdirs() } }
+                File(it, appContext.resources.getString(R.string.app_name)).apply { mkdirs() }
+            }
             return File(mediaDir, "VID_${sdf.format(Date())}.$extension")
         }
     }
+
     private lateinit var surfaceView: SurfaceView
     private var cameraProvider: ProcessCameraProvider? = null
     private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
     private val executor = Executors.newSingleThreadExecutor()
+
     /** File where the recording will be saved */
     private val outputFile: File by lazy { createFile(this, "mp4") }
     private lateinit var converter: YuvToRgbConverter
@@ -61,10 +66,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recorderSurface: Surface
     private val recorder: MediaRecorder by lazy { createRecorder() }
     private var isRecording = false
+    private val captureButton: ImageButton by lazy{ findViewById(R.id.capture_button) }
+    private val animateRecord by lazy {
+        ObjectAnimator.ofFloat(captureButton, View.ALPHA, 1f, 0.5f).apply {
+            repeatMode = ObjectAnimator.REVERSE
+            repeatCount = ObjectAnimator.INFINITE
+            doOnCancel { captureButton.alpha = 1f }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   //保持屏幕常亮
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)   //保持屏幕常亮
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -100,7 +113,7 @@ class MainActivity : AppCompatActivity() {
         requestPermissions(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO), REQUEST_CODE_PERMISSIONS)
         // Init CameraX.
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        cameraProviderFuture.addListener(Runnable {
+        cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
             startCameraIfReady()
         }, ContextCompat.getMainExecutor(this))
@@ -113,7 +126,7 @@ class MainActivity : AppCompatActivity() {
         setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
         setOutputFile(outputFile.absolutePath)
         setVideoEncodingBitRate(RECORDER_VIDEO_BITRATE)
-        setVideoFrameRate(25)
+        setVideoFrameRate(30)
         setVideoSize(1080, 1920)
         setVideoEncoder(MediaRecorder.VideoEncoder.H264)
         setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -138,30 +151,48 @@ class MainActivity : AppCompatActivity() {
                             converter.yuvToRgb(it.image!!, bitmap)
                             it.close()
                             val paint = Paint()
-                            val matrix = Matrix()
-                            matrix.postRotate(90f)
-                            matrix.postTranslate(bitmap.height.toFloat(), 0f)
-                            val previewCanvas = surfaceView.holder.lockHardwareCanvas()//预览的画布
+                            val matrix = getRotateMatrix(it.imageInfo.rotationDegrees, bitmap)
+                            if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                                matrix.postScale(-1f, 1f)
+                                matrix.postTranslate(bitmap.height.toFloat(), 0f)
+                            }
                             if (isRecording) {
                                 val recordCanvas = recorderSurface.lockHardwareCanvas()//录制的画布
                                 recordCanvas.drawBitmap(bitmap, matrix, paint)
                                 for (face in faces) {
-                                    recordCanvas.drawRect(face.boundingBox, paint)
+                                    if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                                        recordCanvas.drawRect(1080-face.boundingBox.right.toFloat(),
+                                                face.boundingBox.top.toFloat(),
+                                                1080-face.boundingBox.left.toFloat(),
+                                                face.boundingBox.bottom.toFloat(),
+                                                paint)
+                                    } else {
+                                        recordCanvas.drawRect(face.boundingBox, paint)
+                                    }
                                 }
                                 recordCanvas.save()
                                 recorderSurface.unlockCanvasAndPost(recordCanvas)
                             }
+                            val previewCanvas = surfaceView.holder.lockHardwareCanvas()//预览的画布
                             previewCanvas.drawBitmap(bitmap, matrix, paint)
                             for (face in faces) {
-                                previewCanvas.drawRect(face.boundingBox, paint)
+                                if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                                    previewCanvas.drawRect(1080-face.boundingBox.right.toFloat(),
+                                            face.boundingBox.top.toFloat(),
+                                            1080-face.boundingBox.left.toFloat(),
+                                            face.boundingBox.bottom.toFloat(),
+                                            paint)
+                                } else {
+                                    previewCanvas.drawRect(face.boundingBox, paint)
+                                }
                             }
                             previewCanvas.save()
                             surfaceView.holder.unlockCanvasAndPost(previewCanvas)
                             val delayTime = System.currentTimeMillis() - start
-                            //Log.d("time", "startCameraIfReady: "+delayTime+"ms")
+                            Log.d("time", "startCameraIfReady: " + delayTime + "ms")
                         }
                         .addOnFailureListener { e ->
-                            Log.e("MLKit", "startCameraIfReady: "+e.localizedMessage, )
+                            Log.e("MLKit", "startCameraIfReady: " + e.localizedMessage)
                         }
             }
         })
@@ -171,12 +202,15 @@ class MainActivity : AppCompatActivity() {
     fun startRecord(view: View) {
         if (isRecording) {
             recorder.stop()
+            recorder.release()
+            animateRecord.cancel()
             MediaScannerConnection.scanFile(
                     view.context, arrayOf(outputFile.absolutePath), null, null)
             isRecording = false
         } else {
             recorder.prepare()
             recorder.start()
+            animateRecord.start()
             recorderSurface = recorder.surface
             Log.d("record", "Recording started")
             isRecording = true
@@ -198,13 +232,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isPermissionsGranted(): Boolean {
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED){
-            return  true
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            return true
         }
         return false
     }
 
     fun switchCamera(view: View) {
+        lensFacing = if (lensFacing == CameraSelector.DEFAULT_BACK_CAMERA) {
+            CameraSelector.DEFAULT_FRONT_CAMERA
+        } else {
+            CameraSelector.DEFAULT_BACK_CAMERA
+        }
+        cameraProvider!!.unbindAll()
+        startCameraIfReady()
+    }
 
+    private fun getRotateMatrix(degrees: Int, bitmap: Bitmap): Matrix {
+        val matrix = Matrix()
+        when (degrees) {
+            90 -> {
+                matrix.postRotate(90f)
+                matrix.postTranslate(bitmap.height.toFloat(), 0f)
+            }
+            180 -> {
+                matrix.postRotate(180f)
+                matrix.postTranslate(0f, bitmap.height.toFloat())
+            }
+            270 -> {
+                matrix.postRotate(270f)
+                matrix.postTranslate(0f, bitmap.width.toFloat())
+            }
+        }
+        return matrix
     }
 }
