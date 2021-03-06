@@ -6,8 +6,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Matrix
-import android.graphics.Paint
 import android.media.MediaRecorder
 import android.media.MediaScannerConnection
 import android.os.Bundle
@@ -35,16 +33,15 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val REQUEST_CODE_PERMISSIONS = 10
         private const val RECORDER_VIDEO_BITRATE: Int = 10_000_000
-        private const val MIN_REQUIRED_RECORDING_TIME_MILLIS: Long = 1000L
 
         /** Creates a [File] named with the current date and time */
-        private fun createFile(context: Context, extension: String): File {
+        private fun createFile(context: Context): File {
             val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.CHINA)
             val appContext = context.applicationContext
             val mediaDir = context.externalMediaDirs.firstOrNull()?.let {
                 File(it, appContext.resources.getString(R.string.app_name)).apply { mkdirs() }
             }
-            return File(mediaDir, "VID_${sdf.format(Date())}.$extension")
+            return File(mediaDir, "VID_${sdf.format(Date())}.mp4")
         }
     }
 
@@ -54,7 +51,7 @@ class MainActivity : AppCompatActivity() {
     private val executor = Executors.newSingleThreadExecutor()
 
     /** File where the recording will be saved */
-    private val outputFile: File by lazy { createFile(this, "mp4") }
+    private val outputFile: File by lazy { createFile(this) }
     private lateinit var converter: YuvToRgbConverter
     private var bitmap: Bitmap? = null
     private val detector = FaceDetection.getClient(
@@ -63,10 +60,11 @@ class MainActivity : AppCompatActivity() {
                     .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
                     .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE).enableTracking()
                     .build())
+    private lateinit var faceDrawer: FaceDrawer
     private lateinit var recorderSurface: Surface
     private val recorder: MediaRecorder by lazy { createRecorder() }
     private var isRecording = false
-    private val captureButton: ImageButton by lazy{ findViewById(R.id.capture_button) }
+    private val captureButton: ImageButton by lazy { findViewById(R.id.capture_button) }
     private val animateRecord by lazy {
         ObjectAnimator.ofFloat(captureButton, View.ALPHA, 1f, 0.5f).apply {
             repeatMode = ObjectAnimator.REVERSE
@@ -78,15 +76,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)   //保持屏幕常亮
-        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                // Hide the nav bar and status bar
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_FULLSCREEN)//设置全屏
         setContentView(R.layout.activity_main)
         // YuvToRgb converter.
         converter = YuvToRgbConverter(this)
+        faceDrawer = FaceDrawer(this)
 
         // Init views.
         surfaceView = findViewById(R.id.preview_surface_view)
@@ -148,45 +141,15 @@ class MainActivity : AppCompatActivity() {
                 detector.process(image)
                         .addOnSuccessListener { faces ->
                             val bitmap = allocateBitmapIfNecessary(it.width, it.height)
-                            converter.yuvToRgb(it.image!!, bitmap)
+                            converter.yuvToRgb(it.image!!, bitmap)//获取bitmap
                             it.close()
-                            val paint = Paint()
-                            val matrix = getRotateMatrix(it.imageInfo.rotationDegrees, bitmap)
-                            if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
-                                matrix.postScale(-1f, 1f)
-                                matrix.postTranslate(bitmap.height.toFloat(), 0f)
-                            }
                             if (isRecording) {
                                 val recordCanvas = recorderSurface.lockHardwareCanvas()//录制的画布
-                                recordCanvas.drawBitmap(bitmap, matrix, paint)
-                                for (face in faces) {
-                                    if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
-                                        recordCanvas.drawRect(1080-face.boundingBox.right.toFloat(),
-                                                face.boundingBox.top.toFloat(),
-                                                1080-face.boundingBox.left.toFloat(),
-                                                face.boundingBox.bottom.toFloat(),
-                                                paint)
-                                    } else {
-                                        recordCanvas.drawRect(face.boundingBox, paint)
-                                    }
-                                }
-                                recordCanvas.save()
+                                faceDrawer.drawFace(faces, bitmap, recordCanvas, lensFacing, it.imageInfo.rotationDegrees)//绘制人脸
                                 recorderSurface.unlockCanvasAndPost(recordCanvas)
                             }
                             val previewCanvas = surfaceView.holder.lockHardwareCanvas()//预览的画布
-                            previewCanvas.drawBitmap(bitmap, matrix, paint)
-                            for (face in faces) {
-                                if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
-                                    previewCanvas.drawRect(1080-face.boundingBox.right.toFloat(),
-                                            face.boundingBox.top.toFloat(),
-                                            1080-face.boundingBox.left.toFloat(),
-                                            face.boundingBox.bottom.toFloat(),
-                                            paint)
-                                } else {
-                                    previewCanvas.drawRect(face.boundingBox, paint)
-                                }
-                            }
-                            previewCanvas.save()
+                            faceDrawer.drawFace(faces, bitmap, previewCanvas, lensFacing, it.imageInfo.rotationDegrees)//绘制人脸
                             surfaceView.holder.unlockCanvasAndPost(previewCanvas)
                             val delayTime = System.currentTimeMillis() - start
                             Log.d("time", "startCameraIfReady: " + delayTime + "ms")
@@ -246,24 +209,5 @@ class MainActivity : AppCompatActivity() {
         }
         cameraProvider!!.unbindAll()
         startCameraIfReady()
-    }
-
-    private fun getRotateMatrix(degrees: Int, bitmap: Bitmap): Matrix {
-        val matrix = Matrix()
-        when (degrees) {
-            90 -> {
-                matrix.postRotate(90f)
-                matrix.postTranslate(bitmap.height.toFloat(), 0f)
-            }
-            180 -> {
-                matrix.postRotate(180f)
-                matrix.postTranslate(0f, bitmap.height.toFloat())
-            }
-            270 -> {
-                matrix.postRotate(270f)
-                matrix.postTranslate(0f, bitmap.width.toFloat())
-            }
-        }
-        return matrix
     }
 }
