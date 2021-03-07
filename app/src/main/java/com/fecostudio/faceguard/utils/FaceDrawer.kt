@@ -16,7 +16,6 @@ class FaceDrawer(context: Context) {
     private val assetManager: AssetManager = context.assets
 
     enum class DrawStyles(val style: Int, var bitmap: Bitmap?) {
-        NONE(0, null),
         BlUR(1, null),
         BlACK(2, null),
         DOGE(3, null),
@@ -111,6 +110,10 @@ class FaceDrawer(context: Context) {
 
         }
         canvas.save()
+    }
+
+    fun setFaceStyle(faceID: Int, style: Int){
+        faceHashMap[faceID] = style
     }
 
     private fun getRotateMatrix(degrees: Int, bitmap: Bitmap): Matrix {

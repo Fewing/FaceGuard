@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="styles">
+        <item>无</item>
+        <item>马赛克</item>
+        <item>纯色块</item>
+        <item>Doge</item>
+        <item>Smile Face</item>
+    </string-array>
+</resources>

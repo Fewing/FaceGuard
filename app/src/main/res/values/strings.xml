@@ -2,4 +2,7 @@
     <string name="app_name">Face Guard</string>
     <string name="capture" />
     <string name="switch_camera_button_alt" />
+    <string name="选择样式" />
+    <string name="onCreateToast">点击人脸可以选择绘制样式</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

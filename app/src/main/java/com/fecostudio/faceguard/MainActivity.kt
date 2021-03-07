@@ -3,9 +3,12 @@ package com.fecostudio.faceguard
 import android.Manifest
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
+import android.app.Dialog
 import android.content.Context
+import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.media.MediaRecorder
 import android.media.MediaScannerConnection
 import android.os.Bundle
@@ -13,14 +16,18 @@ import android.util.Log
 import android.util.Size
 import android.view.*
 import android.widget.ImageButton
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.animation.doOnCancel
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.DialogFragment
 import com.fecostudio.faceguard.utils.*
+import com.google.android.material.snackbar.Snackbar
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import java.io.File
@@ -28,7 +35,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity(), View.OnTouchListener {
+class MainActivity : AppCompatActivity(), View.OnTouchListener,
+    ChooseStyleFragment.ChooseStyleListener {
 
     companion object {
         const val REQUEST_CODE_PERMISSIONS = 10
@@ -61,6 +69,8 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener {
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE).enableTracking()
             .build()
     )
+    private lateinit var faceList: List<Face>
+    private var choosedID = 0
     private lateinit var faceDrawer: FaceDrawer
     private lateinit var recorderSurface: Surface
     private val recorder: MediaRecorder by lazy { createRecorder() }
@@ -104,11 +114,13 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener {
                 //surfaceView.post { initializeCamera() }
             }
         })
+        surfaceView.setOnTouchListener(this)
         // Camera permission needed for CameraX.
         requestPermissions(
             arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
             REQUEST_CODE_PERMISSIONS
         )
+        Snackbar.make(surfaceView, R.string.onCreateToast, 5000).show()
         // Init CameraX.
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -147,6 +159,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener {
                 val image = InputImage.fromMediaImage(mediaImage, it.imageInfo.rotationDegrees)
                 detector.process(image)
                     .addOnSuccessListener { faces ->
+                        faceList = faces
                         val bitmap = allocateBitmapIfNecessary(it.width, it.height)
                         converter.yuvToRgb(it.image!!, bitmap)//获取bitmap
                         it.close()
@@ -239,8 +252,38 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener {
         startCameraIfReady()
     }
 
+    //监听点击操作
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-        Log.d("touch", "onTouch: " + event.toString())
+        if (event != null) {
+            if (event.action == MotionEvent.ACTION_UP) {
+                val x = event.x * 1080 / surfaceView.width
+                val y = event.y * 1920 / surfaceView.height
+                Log.d("touch", "onTouch: $x ,$y")
+                for (face in faceList) {
+                    val faceRect = if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                        Rect(
+                            1080 - face.boundingBox.right,
+                            face.boundingBox.top,
+                            1080 - face.boundingBox.left,
+                            face.boundingBox.bottom
+                        )
+                    } else {
+                        Rect(face.boundingBox)
+                    }
+                    if (faceRect.contains(x.toInt(), y.toInt())) {
+                        choosedID = face.trackingId!!
+                        val dialog = ChooseStyleFragment()
+                        dialog.show(supportFragmentManager, "ChooseStyleFragment")
+                    }
+                }
+            }
+        }
         return true
+    }
+
+    //接受对话结果
+    override fun onDialogClick(dialog: DialogFragment, which: Int) {
+        Log.d("touch", "onTouch: 选择了$which")
+        faceDrawer.setFaceStyle(choosedID, which)
     }
 }
