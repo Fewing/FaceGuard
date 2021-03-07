@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), View.OnTouchListener {
 
     companion object {
         const val REQUEST_CODE_PERMISSIONS = 10
@@ -55,11 +55,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var converter: YuvToRgbConverter
     private var bitmap: Bitmap? = null
     private val detector = FaceDetection.getClient(
-            FaceDetectorOptions.Builder()
-                    .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-                    .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
-                    .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE).enableTracking()
-                    .build())
+        FaceDetectorOptions.Builder()
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
+            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE).enableTracking()
+            .build()
+    )
     private lateinit var faceDrawer: FaceDrawer
     private lateinit var recorderSurface: Surface
     private val recorder: MediaRecorder by lazy { createRecorder() }
@@ -86,10 +87,11 @@ class MainActivity : AppCompatActivity() {
         surfaceView.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceDestroyed(holder: SurfaceHolder) = Unit
             override fun surfaceChanged(
-                    holder: SurfaceHolder,
-                    format: Int,
-                    width: Int,
-                    height: Int) = Unit
+                holder: SurfaceHolder,
+                format: Int,
+                width: Int,
+                height: Int
+            ) = Unit
 
             override fun surfaceCreated(holder: SurfaceHolder) {
 
@@ -103,7 +105,10 @@ class MainActivity : AppCompatActivity() {
             }
         })
         // Camera permission needed for CameraX.
-        requestPermissions(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO), REQUEST_CODE_PERMISSIONS)
+        requestPermissions(
+            arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
+            REQUEST_CODE_PERMISSIONS
+        )
         // Init CameraX.
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -130,33 +135,47 @@ class MainActivity : AppCompatActivity() {
         if (!isPermissionsGranted() || cameraProvider == null) {
             return
         }
-        val imageAnalysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).setTargetResolution(
-                Size(1080, 1920)
-        ).build()
+        val imageAnalysis =
+            ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setTargetResolution(
+                    Size(1080, 1920)
+                ).build()
         imageAnalysis.setAnalyzer(executor, {
             val start = System.currentTimeMillis()
             val mediaImage = it.image
             if (mediaImage != null) {
                 val image = InputImage.fromMediaImage(mediaImage, it.imageInfo.rotationDegrees)
                 detector.process(image)
-                        .addOnSuccessListener { faces ->
-                            val bitmap = allocateBitmapIfNecessary(it.width, it.height)
-                            converter.yuvToRgb(it.image!!, bitmap)//获取bitmap
-                            it.close()
-                            if (isRecording) {
-                                val recordCanvas = recorderSurface.lockHardwareCanvas()//录制的画布
-                                faceDrawer.drawFace(faces, bitmap, recordCanvas, lensFacing, it.imageInfo.rotationDegrees)//绘制人脸
-                                recorderSurface.unlockCanvasAndPost(recordCanvas)
-                            }
-                            val previewCanvas = surfaceView.holder.lockHardwareCanvas()//预览的画布
-                            faceDrawer.drawFace(faces, bitmap, previewCanvas, lensFacing, it.imageInfo.rotationDegrees)//绘制人脸
-                            surfaceView.holder.unlockCanvasAndPost(previewCanvas)
-                            val delayTime = System.currentTimeMillis() - start
-                            Log.d("time", "startCameraIfReady: " + delayTime + "ms")
+                    .addOnSuccessListener { faces ->
+                        val bitmap = allocateBitmapIfNecessary(it.width, it.height)
+                        converter.yuvToRgb(it.image!!, bitmap)//获取bitmap
+                        it.close()
+                        if (isRecording) {
+                            val recordCanvas = recorderSurface.lockHardwareCanvas()//录制的画布
+                            faceDrawer.drawFace(
+                                faces,
+                                bitmap,
+                                recordCanvas,
+                                lensFacing,
+                                it.imageInfo.rotationDegrees
+                            )//绘制人脸
+                            recorderSurface.unlockCanvasAndPost(recordCanvas)
                         }
-                        .addOnFailureListener { e ->
-                            Log.e("MLKit", "startCameraIfReady: " + e.localizedMessage)
-                        }
+                        val previewCanvas = surfaceView.holder.lockHardwareCanvas()//预览的画布
+                        faceDrawer.drawFace(
+                            faces,
+                            bitmap,
+                            previewCanvas,
+                            lensFacing,
+                            it.imageInfo.rotationDegrees
+                        )//绘制人脸
+                        surfaceView.holder.unlockCanvasAndPost(previewCanvas)
+                        val delayTime = System.currentTimeMillis() - start
+                        //Log.d("time", "startCameraIfReady: " + delayTime + "ms")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("MLKit", "startCameraIfReady: " + e.localizedMessage)
+                    }
             }
         })
         cameraProvider!!.bindToLifecycle(this, lensFacing, imageAnalysis)
@@ -168,7 +187,8 @@ class MainActivity : AppCompatActivity() {
             recorder.release()
             animateRecord.cancel()
             MediaScannerConnection.scanFile(
-                    view.context, arrayOf(outputFile.absolutePath), null, null)
+                view.context, arrayOf(outputFile.absolutePath), null, null
+            )
             isRecording = false
         } else {
             recorder.prepare()
@@ -188,14 +208,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(
-            requestCode: Int, permissions: Array<String?>, grantResults: IntArray) {
+        requestCode: Int, permissions: Array<String?>, grantResults: IntArray
+    ) {
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             startCameraIfReady()
         }
     }
 
     private fun isPermissionsGranted(): Boolean {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             return true
         }
         return false
@@ -209,5 +237,10 @@ class MainActivity : AppCompatActivity() {
         }
         cameraProvider!!.unbindAll()
         startCameraIfReady()
+    }
+
+    override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+        Log.d("touch", "onTouch: " + event.toString())
+        return true
     }
 }

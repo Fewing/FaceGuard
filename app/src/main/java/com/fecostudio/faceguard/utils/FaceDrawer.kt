@@ -1,6 +1,7 @@
 package com.fecostudio.faceguard.utils
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.graphics.*
 import android.renderscript.Allocation
 import android.renderscript.Element
@@ -8,20 +9,42 @@ import android.renderscript.RenderScript
 import android.renderscript.ScriptIntrinsicBlur
 import androidx.camera.core.CameraSelector
 import com.google.mlkit.vision.face.Face
+import java.io.InputStream
 
 
 class FaceDrawer(context: Context) {
-    /** 人脸id对应的绘制方式
-     *  0：不绘制
-     *  1：绘制马赛克
-     *  2：绘制黑色块
-     *  大于2：图片*/
+    private val assetManager: AssetManager = context.assets
+
+    enum class DrawStyles(val style: Int, var bitmap: Bitmap?) {
+        NONE(0, null),
+        BlUR(1, null),
+        BlACK(2, null),
+        DOGE(3, null),
+        SMILE_BOY(4, null),
+    }
+
     private val faceHashMap: HashMap<Int?, Int> = HashMap()
+
     private val rs = RenderScript.create(context)
+    private val blurScript = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs))
+
     private val ratio = 10
     private val radius = 5f
 
-    fun drawFace(faces: List<Face>, bitmap: Bitmap, canvas: Canvas, lensFacing: CameraSelector, degrees: Int) {
+    init {
+        var inputStream: InputStream = assetManager.open("picture/doge.png")
+        DrawStyles.DOGE.bitmap = BitmapFactory.decodeStream(inputStream)
+        inputStream = assetManager.open("picture/smileboy.png")
+        DrawStyles.SMILE_BOY.bitmap = BitmapFactory.decodeStream(inputStream)
+    }
+
+    fun drawFace(
+        faces: List<Face>,
+        bitmap: Bitmap,
+        canvas: Canvas,
+        lensFacing: CameraSelector,
+        degrees: Int
+    ) {
         val matrix = getRotateMatrix(degrees, bitmap)//用于绘制原图的matrix
         val scaleMatrix = Matrix()//用于绘制马赛克的matrix
         scaleMatrix.postRotate(degrees.toFloat())
@@ -31,32 +54,59 @@ class FaceDrawer(context: Context) {
             matrix.postTranslate(bitmap.height.toFloat(), 0f)
             scaleMatrix.postScale(-1f, 1f)
         }
-        var scaledBitmap = Bitmap.createScaledBitmap(bitmap, bitmap.width / ratio, bitmap.height / ratio, false)
-        scaledBitmap = Bitmap.createBitmap(scaledBitmap, 0, 0, scaledBitmap.width, scaledBitmap.height, scaleMatrix, false)
+        var scaledBitmap =
+            Bitmap.createScaledBitmap(bitmap, bitmap.width / ratio, bitmap.height / ratio, false)
+        scaledBitmap = Bitmap.createBitmap(
+            scaledBitmap,
+            0,
+            0,
+            scaledBitmap.width,
+            scaledBitmap.height,
+            scaleMatrix,
+            false
+        )
         blurBitmapByRender(scaledBitmap)
         canvas.drawBitmap(bitmap, matrix, paint)
         for (face in faces) {
-            if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
-                val temp = face.boundingBox.left
-                face.boundingBox.left = 1080 - face.boundingBox.right
-                face.boundingBox.right = 1080 - temp
+            val faceRect = if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                Rect(
+                    1080 - face.boundingBox.right,
+                    face.boundingBox.top,
+                    1080 - face.boundingBox.left,
+                    face.boundingBox.bottom
+                )
+            } else {
+                Rect(face.boundingBox)
             }
             if (faceHashMap.containsKey(face.trackingId)) {
                 when (faceHashMap[face.trackingId]) {
-                    1 -> {
-                        val scaleFaceRect = Rect(face.boundingBox.left / ratio, face.boundingBox.top / ratio, face.boundingBox.right / ratio, face.boundingBox.bottom / ratio)
-                        canvas.drawBitmap(scaledBitmap, scaleFaceRect, face.boundingBox, paint)
+                    DrawStyles.BlUR.style -> {
+                        val scaleFaceRect = Rect(
+                            faceRect.left / ratio,
+                            faceRect.top / ratio,
+                            faceRect.right / ratio,
+                            faceRect.bottom / ratio
+                        )
+                        canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
                     }
-                    2 -> {
+                    DrawStyles.BlACK.style -> {
                         paint.setARGB(255, 0, 0, 0)
-                        canvas.drawRect(face.boundingBox, paint)
+                        canvas.drawRect(faceRect, paint)
                     }
-                    3, 4, 5, 6, 7 -> {
-                        //Todo:添加图片头像绘制
+                    DrawStyles.DOGE.style -> {
+                        canvas.drawBitmap(DrawStyles.DOGE.bitmap!!, null, faceRect, paint)
+                    }
+                    DrawStyles.SMILE_BOY.style -> {
+                        canvas.drawBitmap(
+                            DrawStyles.SMILE_BOY.bitmap!!,
+                            null,
+                            faceRect,
+                            paint
+                        )
                     }
                 }
-            } else {//添加新的人脸
-                faceHashMap[face.trackingId] = 1//默认马赛克
+            } else {
+                faceHashMap[face.trackingId] = DrawStyles.BlUR.style//添加新的人脸，默认马赛克
             }
 
         }
@@ -83,12 +133,10 @@ class FaceDrawer(context: Context) {
     }
 
     private fun blurBitmapByRender(bitmap: Bitmap) {
-        val outBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-        val blurScript = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs))
         val allocation = Allocation.createFromBitmap(rs, bitmap)
         blurScript.setInput(allocation)
         blurScript.setRadius(radius)
         blurScript.forEach(allocation)
-        allocation.copyTo(outBitmap)
+        //rs.finish()
     }
 }
