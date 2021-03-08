@@ -180,8 +180,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                             it.imageInfo.rotationDegrees
                         )//绘制人脸
                         surfaceView.holder.unlockCanvasAndPost(previewCanvas)
-                        val delayTime = System.currentTimeMillis() - start
-                        //Log.d("time", "startCameraIfReady: " + delayTime + "ms")
+                        //Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
                     }
                     .addOnFailureListener { e ->
                         Log.e("MLKit", "startCameraIfReady: " + e.localizedMessage)

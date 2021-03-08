@@ -7,6 +7,7 @@ import android.renderscript.Allocation
 import android.renderscript.Element
 import android.renderscript.RenderScript
 import android.renderscript.ScriptIntrinsicBlur
+import android.util.Log
 import androidx.camera.core.CameraSelector
 import com.google.mlkit.vision.face.Face
 import java.io.InputStream
@@ -22,13 +23,16 @@ class FaceDrawer(context: Context) {
         SMILE_BOY(4, null),
     }
 
-    private val faceHashMap: HashMap<Int?, Int> = HashMap()
+    private val faceHashMap: HashMap<Int?, Int> = HashMap() //真实人脸id对应的样式
+    private val idHashMap: HashMap<Int?, Int> = HashMap() //trackingID对应的真实人脸id
 
     private val rs = RenderScript.create(context)
     private val blurScript = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs))
 
     private val ratio = 10
     private val radius = 5f
+
+    private val faceRecognizer = FaceRecognizer(context)
 
     init {
         var inputStream: InputStream = assetManager.open("picture/doge.png")
@@ -77,8 +81,8 @@ class FaceDrawer(context: Context) {
             } else {
                 Rect(face.boundingBox)
             }
-            if (faceHashMap.containsKey(face.trackingId)) {
-                when (faceHashMap[face.trackingId]) {
+            if (idHashMap.containsKey(face.trackingId)) {
+                when (faceHashMap[idHashMap[face.trackingId]]) {
                     DrawStyles.BlUR.style -> {
                         val scaleFaceRect = Rect(
                             faceRect.left / ratio,
@@ -105,15 +109,44 @@ class FaceDrawer(context: Context) {
                     }
                 }
             } else {
-                faceHashMap[face.trackingId] = DrawStyles.BlUR.style//添加新的人脸，默认马赛克
+                //获取人脸bitmap用于TensorFlow Lite
+                val rotateFaceRect = getRotateRect(degrees, faceRect, lensFacing)
+                matrix.setRotate(degrees.toFloat())
+                if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                    matrix.postScale(-1f, 1f)
+                }
+                if (Rect(
+                        0,
+                        0,
+                        bitmap.width.toInt(),
+                        bitmap.height.toInt()
+                    ).contains(rotateFaceRect)
+                ) {
+                    val faceBitmap = Bitmap.createBitmap(
+                        bitmap,
+                        rotateFaceRect.left,
+                        rotateFaceRect.top,
+                        rotateFaceRect.width(),
+                        rotateFaceRect.height(),
+                        matrix,
+                        false
+                    )
+                    val realFaceID = faceRecognizer.getNearestFace(faceBitmap,face.trackingId!!)
+                    Log.d("tflite", "realFaceID: $realFaceID")
+                    if (faceHashMap.containsKey(realFaceID)){
+                        idHashMap[face.trackingId] = realFaceID //有匹配的人脸
+                    }else {
+                        faceHashMap[face.trackingId] = DrawStyles.BlUR.style//有新人脸出现，添加默认马赛克效果
+                        idHashMap[face.trackingId] = realFaceID
+                    }
+                }
             }
-
         }
         canvas.save()
     }
 
-    fun setFaceStyle(faceID: Int, style: Int){
-        faceHashMap[faceID] = style
+    fun setFaceStyle(faceID: Int, style: Int) {
+        faceHashMap[idHashMap[faceID]] = style
     }
 
     private fun getRotateMatrix(degrees: Int, bitmap: Bitmap): Matrix {
@@ -133,6 +166,33 @@ class FaceDrawer(context: Context) {
             }
         }
         return matrix
+    }
+
+    //从原bitmap中获取人脸框旋转
+    private fun getRotateRect(degrees: Int, rect: Rect, lensFacing: CameraSelector): Rect {
+        when (degrees) {
+            90 -> {
+                return if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA)
+                    Rect(rect.top, rect.left, rect.bottom, rect.right)
+                else
+                    Rect(rect.top, 1080 - rect.right, rect.bottom, 1080 - rect.left)
+            }
+            180 -> {
+                return rect //待实现
+            }
+            270 -> {
+                return if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA)
+                    Rect(
+                        1920 - rect.bottom,
+                        1080 - rect.right,
+                        1920 - rect.top,
+                        1080 - rect.left
+                    )
+                else
+                    Rect(1920 - rect.bottom, rect.left, 1920 - rect.top, rect.right)
+            }
+        }
+        return rect
     }
 
     private fun blurBitmapByRender(bitmap: Bitmap) {
