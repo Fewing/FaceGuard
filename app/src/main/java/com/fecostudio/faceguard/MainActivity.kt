@@ -3,9 +3,7 @@ package com.fecostudio.faceguard
 import android.Manifest
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
-import android.app.Dialog
 import android.content.Context
-import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Rect
@@ -16,7 +14,6 @@ import android.util.Log
 import android.util.Size
 import android.view.*
 import android.widget.ImageButton
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
