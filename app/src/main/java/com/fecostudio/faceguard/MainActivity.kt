@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
             .build()
     )
     private lateinit var faceList: List<Face>
-    private var choosedID = 0
+    private var chosenID = 0
     private lateinit var faceDrawer: FaceDrawer
     private lateinit var recorderSurface: Surface
     private val recorder: MediaRecorder by lazy { createRecorder() }
@@ -268,7 +268,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                         Rect(face.boundingBox)
                     }
                     if (faceRect.contains(x.toInt(), y.toInt())) {
-                        choosedID = face.trackingId!!
+                        chosenID = face.trackingId!!
                         val dialog = ChooseStyleFragment()
                         dialog.show(supportFragmentManager, "ChooseStyleFragment")
                     }
@@ -281,6 +281,6 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     //接受对话结果
     override fun onDialogClick(dialog: DialogFragment, which: Int) {
         Log.d("touch", "onTouch: 选择了$which")
-        faceDrawer.setFaceStyle(choosedID, which)
+        faceDrawer.setFaceStyle(chosenID, which)
     }
 }

@@ -50,4 +50,8 @@ dependencies {
     // If you want to additionally use the CameraX Lifecycle library
     implementation "androidx.camera:camera-lifecycle:${cameraX_version}"
     implementation 'com.google.mlkit:face-detection:16.0.5'
+    // TensorFlow lite dependencies
+    implementation 'org.tensorflow:tensorflow-lite:2.4.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.4.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.1.0'
 }
