@@ -31,26 +31,61 @@
         android:layout_height="match_parent"
         android:foreground="@android:color/transparent" />
 
-    <ImageButton
-        android:id="@+id/camera_switch_button"
-        android:layout_width="72dp"
-        android:layout_height="72dp"
-        android:layout_marginBottom="12dp"
-        android:layout_marginStart="12dp"
-        android:layout_gravity="bottom|left"
-        android:background="@drawable/ic_switch"
-        android:contentDescription="@string/switch_camera_button_alt"
-        android:onClick="switchCamera"
-        android:scaleType="fitCenter" />
-
-    <ImageButton
-        android:id="@+id/capture_button"
-        android:layout_width="96dp"
-        android:layout_height="96dp"
-        android:layout_gravity="bottom|center"
-        android:scaleType="fitCenter"
-        android:background="@drawable/ic_shutter_normal"
-        android:onClick="startRecord"
-        android:contentDescription="@string/capture" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="128dp"
+        android:gravity="center"
+        android:layout_alignParentBottom="true"
+        android:layout_centerVertical="true"
+        android:background="#30000000"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_centerVertical="true"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:layout_height="match_parent">
+            <ImageButton
+                android:id="@+id/camera_switch_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/ic_switch"
+                android:contentDescription="@string/switch_camera_button_alt"
+                android:onClick="switchCamera"
+                android:scaleType="fitCenter" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_centerVertical="true"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:layout_height="match_parent">
+            <ImageButton
+                android:id="@+id/capture_button"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/ic_shutter_normal"
+                android:contentDescription="@string/capture"
+                android:cropToPadding="false"
+                android:onClick="startRecord"
+                android:scaleType="fitCenter" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_centerVertical="true"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:layout_height="match_parent">
+            <ImageButton
+                android:id="@+id/another_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/ic_switch"
+                android:contentDescription="@string/switch_camera_button_alt"
+                android:onClick="switchCamera"
+                android:scaleType="fitCenter" />
+        </LinearLayout>
+    </LinearLayout>
 
 </FrameLayout>
