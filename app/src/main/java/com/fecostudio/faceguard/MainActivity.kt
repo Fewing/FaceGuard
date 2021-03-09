@@ -20,7 +20,6 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.animation.doOnCancel
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.DialogFragment
 import com.fecostudio.faceguard.utils.*
 import com.google.android.material.snackbar.Snackbar
 import com.google.mlkit.vision.common.InputImage
@@ -67,7 +66,6 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
             .build()
     )
     private lateinit var faceList: List<Face>
-    private lateinit var chosenFace: Face
     private lateinit var faceDrawer: FaceDrawer
     private lateinit var recorderSurface: Surface
     private val recorder: MediaRecorder by lazy { createRecorder() }
@@ -81,6 +79,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)   //保持屏幕常亮
@@ -117,7 +116,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
             arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
             REQUEST_CODE_PERMISSIONS
         )
-        Snackbar.make(surfaceView, R.string.onCreateToast, 5000).show()
+        Snackbar.make(surfaceView, R.string.on_create_tip, 3000).show()
         // Init CameraX.
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -180,7 +179,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                             it.imageInfo.rotationDegrees
                         )//绘制人脸
                         surfaceView.holder.unlockCanvasAndPost(previewCanvas)
-                        //Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
+                        Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
                     }
                     .addOnFailureListener { e ->
                         Log.e("MLKit", "startCameraIfReady: " + e.localizedMessage)
@@ -249,6 +248,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     }
 
     //监听点击操作
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         if (event != null) {
             if (event.action == MotionEvent.ACTION_UP) {
@@ -267,8 +267,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                         Rect(face.boundingBox)
                     }
                     if (faceRect.contains(x.toInt(), y.toInt())) {
-                        chosenFace = face
-                        val dialog = ChooseStyleFragment()
+                        val dialog = ChooseStyleFragment(bitmap!!, face)
                         dialog.show(supportFragmentManager, "ChooseStyleFragment")
                     }
                 }
@@ -278,8 +277,10 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     }
 
     //接受对话结果
-    override fun onDialogClick(dialog: DialogFragment, which: Int) {
+    override fun onDialogClick(bitmap: Bitmap, face: Face, which: Int) {
         Log.d("touch", "onTouch: 选择了$which")
-        faceDrawer.setFaceStyle(chosenFace, which)
+        if (!faceDrawer.setFaceStyle(face, which, bitmap)){
+            Snackbar.make(surfaceView, R.string.failed_to_register, 3000).show()
+        }
     }
 }

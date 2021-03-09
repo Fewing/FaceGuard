@@ -26,7 +26,6 @@ class FaceRecognizer(context: Context) {
     private val options = Interpreter.Options().addDelegate(GpuDelegate())
     private val interpreter = Interpreter(model, options)
     private val registered: HashMap<Int, FloatArray> = HashMap<Int, FloatArray>()
-    private var idCount = 0
 
     private fun loadImage(bitmap: Bitmap): TensorImage {
         val imageProcessor = ImageProcessor.Builder()
@@ -39,18 +38,18 @@ class FaceRecognizer(context: Context) {
         return tensorImage
     }
 
-    fun getNearestFace(bitmap: Bitmap, faceID: Int): Int {
+    fun getNearestFace(bitmap: Bitmap): Int {
         val tensorImage: TensorImage = loadImage(bitmap)
         val probabilityBuffer =
             TensorBuffer.createFixedSize(intArrayOf(1, 192), DataType.FLOAT32)
         interpreter.run(tensorImage.buffer, probabilityBuffer.buffer)
         val probabilityProcessor = TensorProcessor.Builder().build()
-        val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray;
+        val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
         //和注册的人脸比对
         if (registered.size > 0) {
             val nearest = findNearest(embeddings)
             Log.d("tflite", "size: ${registered.size}")
-            return if (nearest != null && nearest.second < 1.1) {
+            return if (nearest != null && nearest.second < 1.0) {
                 Log.d("tflite", "distance: ${nearest.second}")
                 nearest.first
             } else {
@@ -61,13 +60,12 @@ class FaceRecognizer(context: Context) {
     }
 
     fun registerFace(bitmap: Bitmap, faceID: Int) {
-        val start = System.currentTimeMillis()
         val tensorImage: TensorImage = loadImage(bitmap)
         val probabilityBuffer =
             TensorBuffer.createFixedSize(intArrayOf(1, 192), DataType.FLOAT32)
         interpreter.run(tensorImage.buffer, probabilityBuffer.buffer)
         val probabilityProcessor = TensorProcessor.Builder().build()
-        val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray;
+        val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
         registered[faceID] = embeddings
     }
 

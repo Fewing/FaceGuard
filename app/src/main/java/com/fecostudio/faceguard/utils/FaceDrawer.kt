@@ -34,7 +34,6 @@ class FaceDrawer(context: Context) {
 
     private val faceRecognizer = FaceRecognizer(context)
 
-    private lateinit var currentBitmap: Bitmap
     private var currentRotate = 90
     private lateinit var currentLensFacing: CameraSelector
 
@@ -75,22 +74,12 @@ class FaceDrawer(context: Context) {
         )
         blurBitmapByRender(scaledBitmap)
         canvas.drawBitmap(bitmap, matrix, paint)
-        currentBitmap = bitmap
         currentLensFacing = lensFacing
         currentRotate = degrees
         for (face in faces) {
-            val faceRect = if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
-                Rect(
-                    1080 - face.boundingBox.right,
-                    face.boundingBox.top,
-                    1080 - face.boundingBox.left,
-                    face.boundingBox.bottom
-                )
-            } else {
-                Rect(face.boundingBox)
-            }
-            if (idHashMap.containsKey(face.trackingId)) {
-                //旧的tracking id
+            val faceRect = getFaceRect(face, lensFacing)
+            if (idHashMap.containsKey(face.trackingId) && idHashMap[face.trackingId] != -1) {
+                //已注册的tracking id
                 when (faceHashMap[idHashMap[face.trackingId]]) {
                     DrawStyles.BlUR.style -> {
                         val scaleFaceRect = Rect(
@@ -118,7 +107,7 @@ class FaceDrawer(context: Context) {
                     }
                 }
             } else {
-                //新的tracking id
+                //新出现或者未注册的tracking id
                 val rotateFaceRect = getRotateRect(degrees, faceRect, lensFacing)
                 matrix.setRotate(degrees.toFloat())
                 if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
@@ -127,8 +116,8 @@ class FaceDrawer(context: Context) {
                 if (Rect(
                         0,
                         0,
-                        bitmap.width.toInt(),
-                        bitmap.height.toInt()
+                        bitmap.width,
+                        bitmap.height
                     ).contains(rotateFaceRect)
                 ) {
                     val faceBitmap = Bitmap.createBitmap(
@@ -140,27 +129,26 @@ class FaceDrawer(context: Context) {
                         matrix,
                         false
                     )
-                    val realFaceID = faceRecognizer.getNearestFace(faceBitmap,face.trackingId!!)
+                    val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
                     Log.d("tflite", "realFaceID: $realFaceID")
                     idHashMap[face.trackingId] = realFaceID
                 }
+                val scaleFaceRect = Rect(
+                    faceRect.left / ratio,
+                    faceRect.top / ratio,
+                    faceRect.right / ratio,
+                    faceRect.bottom / ratio
+                )
+                canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
             }
         }
         canvas.save()
     }
-    //注册人脸
-    fun setFaceStyle(face: Face, style: Int) {
-        val faceRect = if (currentLensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
-            Rect(
-                1080 - face.boundingBox.right,
-                face.boundingBox.top,
-                1080 - face.boundingBox.left,
-                face.boundingBox.bottom
-            )
-        } else {
-            Rect(face.boundingBox)
-        }
-        val rotateFaceRect = getRotateRect(currentRotate, faceRect, currentLensFacing)
+
+    /** 注册人脸，并设定绘制风格 */
+    fun setFaceStyle(face: Face, style: Int, bitmap: Bitmap):Boolean {
+        val rotateFaceRect =
+            getRotateRect(currentRotate, getFaceRect(face, currentLensFacing), currentLensFacing)
         val matrix = Matrix()
         matrix.setRotate(currentRotate.toFloat())
         if (currentLensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
@@ -169,12 +157,12 @@ class FaceDrawer(context: Context) {
         if (Rect(
                 0,
                 0,
-                currentBitmap.width,
-                currentBitmap.height
+                bitmap.width,
+                bitmap.height
             ).contains(rotateFaceRect)
         ) {
             val faceBitmap = Bitmap.createBitmap(
-                currentBitmap,
+                bitmap,
                 rotateFaceRect.left,
                 rotateFaceRect.top,
                 rotateFaceRect.width(),
@@ -182,17 +170,19 @@ class FaceDrawer(context: Context) {
                 matrix,
                 false
             )
-            val realFaceID = faceRecognizer.getNearestFace(faceBitmap,face.trackingId!!)
+            val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
             Log.d("tflite", "realFaceID: $realFaceID")
-            if (realFaceID != -1){
+            if (realFaceID != -1) {
                 idHashMap[face.trackingId] = realFaceID //有匹配的人脸
                 faceHashMap[realFaceID] = style //设置新的效果
-            }else {
-                faceRecognizer.registerFace(faceBitmap,face.trackingId!!)//无匹配的人脸
+            } else {
+                faceRecognizer.registerFace(faceBitmap, face.trackingId!!)//无匹配的人脸
                 idHashMap[face.trackingId] = face.trackingId!!
                 faceHashMap[face.trackingId] = style
             }
+            return true
         }
+        return false
     }
 
     private fun getRotateMatrix(degrees: Int, bitmap: Bitmap): Matrix {
@@ -214,7 +204,20 @@ class FaceDrawer(context: Context) {
         return matrix
     }
 
-    //从原bitmap中获取人脸框旋转
+    private fun getFaceRect(face: Face, lensFacing: CameraSelector): Rect {
+        return if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+            Rect(
+                1080 - face.boundingBox.right,
+                face.boundingBox.top,
+                1080 - face.boundingBox.left,
+                face.boundingBox.bottom
+            )
+        } else {
+            Rect(face.boundingBox)
+        }
+    }
+
+    /** 获取从bitmap原图中取人脸子集的Rect */
     private fun getRotateRect(degrees: Int, rect: Rect, lensFacing: CameraSelector): Rect {
         when (degrees) {
             90 -> {
