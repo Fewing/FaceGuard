@@ -46,22 +46,29 @@ class FaceRecognizer(context: Context) {
         interpreter.run(tensorImage.buffer, probabilityBuffer.buffer)
         val probabilityProcessor = TensorProcessor.Builder().build()
         val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray;
-        var distance = Float.MAX_VALUE
         //和注册的人脸比对
         if (registered.size > 0) {
             val nearest = findNearest(embeddings)
-            if (nearest != null && nearest.second < 1.0) {
-                val id: Int = nearest.first
-                distance = nearest.second
-                Log.d("tflite", "getNearestFace: $id distance: $distance")
-                return id
+            Log.d("tflite", "size: ${registered.size}")
+            return if (nearest != null && nearest.second < 1.1) {
+                Log.d("tflite", "distance: ${nearest.second}")
+                nearest.first
             } else {
-                registered[faceID] = embeddings
+                -1
             }
-        } else {
-            registered[faceID] = embeddings
         }
-        return 0
+        return -1
+    }
+
+    fun registerFace(bitmap: Bitmap, faceID: Int) {
+        val start = System.currentTimeMillis()
+        val tensorImage: TensorImage = loadImage(bitmap)
+        val probabilityBuffer =
+            TensorBuffer.createFixedSize(intArrayOf(1, 192), DataType.FLOAT32)
+        interpreter.run(tensorImage.buffer, probabilityBuffer.buffer)
+        val probabilityProcessor = TensorProcessor.Builder().build()
+        val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray;
+        registered[faceID] = embeddings
     }
 
     //返回最接近的数据

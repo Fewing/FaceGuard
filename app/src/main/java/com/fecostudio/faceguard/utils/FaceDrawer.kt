@@ -34,11 +34,16 @@ class FaceDrawer(context: Context) {
 
     private val faceRecognizer = FaceRecognizer(context)
 
+    private lateinit var currentBitmap: Bitmap
+    private var currentRotate = 90
+    private lateinit var currentLensFacing: CameraSelector
+
     init {
         var inputStream: InputStream = assetManager.open("picture/doge.png")
         DrawStyles.DOGE.bitmap = BitmapFactory.decodeStream(inputStream)
         inputStream = assetManager.open("picture/smileboy.png")
         DrawStyles.SMILE_BOY.bitmap = BitmapFactory.decodeStream(inputStream)
+        faceHashMap[-1] = DrawStyles.BlUR.style
     }
 
     fun drawFace(
@@ -70,6 +75,9 @@ class FaceDrawer(context: Context) {
         )
         blurBitmapByRender(scaledBitmap)
         canvas.drawBitmap(bitmap, matrix, paint)
+        currentBitmap = bitmap
+        currentLensFacing = lensFacing
+        currentRotate = degrees
         for (face in faces) {
             val faceRect = if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
                 Rect(
@@ -82,6 +90,7 @@ class FaceDrawer(context: Context) {
                 Rect(face.boundingBox)
             }
             if (idHashMap.containsKey(face.trackingId)) {
+                //旧的tracking id
                 when (faceHashMap[idHashMap[face.trackingId]]) {
                     DrawStyles.BlUR.style -> {
                         val scaleFaceRect = Rect(
@@ -109,7 +118,7 @@ class FaceDrawer(context: Context) {
                     }
                 }
             } else {
-                //获取人脸bitmap用于TensorFlow Lite
+                //新的tracking id
                 val rotateFaceRect = getRotateRect(degrees, faceRect, lensFacing)
                 matrix.setRotate(degrees.toFloat())
                 if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
@@ -133,20 +142,57 @@ class FaceDrawer(context: Context) {
                     )
                     val realFaceID = faceRecognizer.getNearestFace(faceBitmap,face.trackingId!!)
                     Log.d("tflite", "realFaceID: $realFaceID")
-                    if (faceHashMap.containsKey(realFaceID)){
-                        idHashMap[face.trackingId] = realFaceID //有匹配的人脸
-                    }else {
-                        faceHashMap[face.trackingId] = DrawStyles.BlUR.style//有新人脸出现，添加默认马赛克效果
-                        idHashMap[face.trackingId] = realFaceID
-                    }
+                    idHashMap[face.trackingId] = realFaceID
                 }
             }
         }
         canvas.save()
     }
-
-    fun setFaceStyle(faceID: Int, style: Int) {
-        faceHashMap[idHashMap[faceID]] = style
+    //注册人脸
+    fun setFaceStyle(face: Face, style: Int) {
+        val faceRect = if (currentLensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+            Rect(
+                1080 - face.boundingBox.right,
+                face.boundingBox.top,
+                1080 - face.boundingBox.left,
+                face.boundingBox.bottom
+            )
+        } else {
+            Rect(face.boundingBox)
+        }
+        val rotateFaceRect = getRotateRect(currentRotate, faceRect, currentLensFacing)
+        val matrix = Matrix()
+        matrix.setRotate(currentRotate.toFloat())
+        if (currentLensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+            matrix.postScale(-1f, 1f)
+        }
+        if (Rect(
+                0,
+                0,
+                currentBitmap.width,
+                currentBitmap.height
+            ).contains(rotateFaceRect)
+        ) {
+            val faceBitmap = Bitmap.createBitmap(
+                currentBitmap,
+                rotateFaceRect.left,
+                rotateFaceRect.top,
+                rotateFaceRect.width(),
+                rotateFaceRect.height(),
+                matrix,
+                false
+            )
+            val realFaceID = faceRecognizer.getNearestFace(faceBitmap,face.trackingId!!)
+            Log.d("tflite", "realFaceID: $realFaceID")
+            if (realFaceID != -1){
+                idHashMap[face.trackingId] = realFaceID //有匹配的人脸
+                faceHashMap[realFaceID] = style //设置新的效果
+            }else {
+                faceRecognizer.registerFace(faceBitmap,face.trackingId!!)//无匹配的人脸
+                idHashMap[face.trackingId] = face.trackingId!!
+                faceHashMap[face.trackingId] = style
+            }
+        }
     }
 
     private fun getRotateMatrix(degrees: Int, bitmap: Bitmap): Matrix {
