@@ -61,11 +61,12 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     private val detector = FaceDetection.getClient(
         FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+            .setContourMode(FaceDetectorOptions.CONTOUR_MODE_NONE)
             .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE).enableTracking()
             .build()
     )
-    private lateinit var faceList: List<Face>
+    private var faceList: List<Face> = emptyList()
     private lateinit var faceDrawer: FaceDrawer
     private lateinit var recorderSurface: Surface
     private val recorder: MediaRecorder by lazy { createRecorder() }
@@ -104,7 +105,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 // Selects appropriate preview size and configures view finder
                 Log.d("size", "Surface View size: ${surfaceView.width} x ${surfaceView.height}")
                 surfaceView.layoutParams.height = surfaceView.width * 16 / 9
-                holder.setFixedSize(1080, 1080 * 16 / 9)
+                holder.setFixedSize(720, 720 * 16 / 9)
 
                 // To ensure that size is set, initialize camera in the view's thread
                 //surfaceView.post { initializeCamera() }
@@ -133,7 +134,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         setOutputFile(outputFile.absolutePath)
         setVideoEncodingBitRate(RECORDER_VIDEO_BITRATE)
         setVideoFrameRate(30)
-        setVideoSize(1080, 1920)
+        setVideoSize(720, 1280)
         setVideoEncoder(MediaRecorder.VideoEncoder.H264)
         setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
     }
@@ -146,44 +147,45 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         val imageAnalysis =
             ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setTargetResolution(
-                    Size(1080, 1920)
+                    Size(720, 1280)
                 ).build()
         imageAnalysis.setAnalyzer(executor, {
             val start = System.currentTimeMillis()
             val mediaImage = it.image
             if (mediaImage != null) {
                 val image = InputImage.fromMediaImage(mediaImage, it.imageInfo.rotationDegrees)
-                detector.process(image)
+                val task = detector.process(image)
                     .addOnSuccessListener { faces ->
                         faceList = faces
-                        val bitmap = allocateBitmapIfNecessary(it.width, it.height)
-                        converter.yuvToRgb(it.image!!, bitmap)//获取bitmap
-                        it.close()
-                        if (isRecording) {
-                            val recordCanvas = recorderSurface.lockHardwareCanvas()//录制的画布
-                            faceDrawer.drawFace(
-                                faces,
-                                bitmap,
-                                recordCanvas,
-                                lensFacing,
-                                it.imageInfo.rotationDegrees
-                            )//绘制人脸
-                            recorderSurface.unlockCanvasAndPost(recordCanvas)
-                        }
-                        val previewCanvas = surfaceView.holder.lockHardwareCanvas()//预览的画布
-                        faceDrawer.drawFace(
-                            faces,
-                            bitmap,
-                            previewCanvas,
-                            lensFacing,
-                            it.imageInfo.rotationDegrees
-                        )//绘制人脸
-                        surfaceView.holder.unlockCanvasAndPost(previewCanvas)
-                        Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
                     }
                     .addOnFailureListener { e ->
-                        Log.e("MLKit", "startCameraIfReady: " + e.localizedMessage)
+                        Log.e("MLKit", "MLKit: " + e.localizedMessage)
                     }
+                val bitmap = allocateBitmapIfNecessary(it.width, it.height)
+                converter.yuvToRgb(it.image!!, bitmap)//获取bitmap
+                if (isRecording) {
+                    val recordCanvas = recorderSurface.lockHardwareCanvas()//录制的画布
+                    faceDrawer.drawFace(
+                        faceList,
+                        bitmap,
+                        recordCanvas,
+                        lensFacing,
+                        it.imageInfo.rotationDegrees
+                    )//绘制人脸
+                    recorderSurface.unlockCanvasAndPost(recordCanvas)
+                }
+                val previewCanvas = surfaceView.holder.lockHardwareCanvas()//预览的画布
+                faceDrawer.drawFace(
+                    faceList,
+                    bitmap,
+                    previewCanvas,
+                    lensFacing,
+                    it.imageInfo.rotationDegrees
+                )//绘制人脸
+                surfaceView.holder.unlockCanvasAndPost(previewCanvas)
+                while (!task.isComplete){}
+                it.close()
+                Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
             }
         })
         cameraProvider!!.bindToLifecycle(this, lensFacing, imageAnalysis)
@@ -252,15 +254,15 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         if (event != null) {
             if (event.action == MotionEvent.ACTION_UP) {
-                val x = event.x * 1080 / surfaceView.width
-                val y = event.y * 1920 / surfaceView.height
+                val x = event.x * 720 / surfaceView.width
+                val y = event.y * 1280 / surfaceView.height
                 Log.d("touch", "onTouch: $x ,$y")
                 for (face in faceList) {
                     val faceRect = if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
                         Rect(
-                            1080 - face.boundingBox.right,
+                            720 - face.boundingBox.right,
                             face.boundingBox.top,
-                            1080 - face.boundingBox.left,
+                            720 - face.boundingBox.left,
                             face.boundingBox.bottom
                         )
                     } else {
@@ -279,7 +281,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     //接受对话结果
     override fun onDialogClick(bitmap: Bitmap, face: Face, which: Int) {
         Log.d("touch", "onTouch: 选择了$which")
-        if (!faceDrawer.setFaceStyle(face, which, bitmap)){
+        if (!faceDrawer.setFaceStyle(face, which, bitmap)) {
             Snackbar.make(surfaceView, R.string.failed_to_register, 3000).show()
         }
     }

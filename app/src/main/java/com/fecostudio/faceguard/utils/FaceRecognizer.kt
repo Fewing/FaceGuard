@@ -49,7 +49,7 @@ class FaceRecognizer(context: Context) {
         if (registered.size > 0) {
             val nearest = findNearest(embeddings)
             Log.d("tflite", "size: ${registered.size}")
-            return if (nearest != null && nearest.second < 1.0) {
+            return if (nearest != null && nearest.second < 0.9) {
                 Log.d("tflite", "distance: ${nearest.second}")
                 nearest.first
             } else {

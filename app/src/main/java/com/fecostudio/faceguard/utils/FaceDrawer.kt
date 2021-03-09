@@ -30,7 +30,9 @@ class FaceDrawer(context: Context) {
     private val blurScript = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs))
 
     private val ratio = 10
-    private val radius = 5f
+    private val radius = 4f
+
+    private var frameCount = 0
 
     private val faceRecognizer = FaceRecognizer(context)
 
@@ -72,22 +74,23 @@ class FaceDrawer(context: Context) {
             scaleMatrix,
             false
         )
+
         blurBitmapByRender(scaledBitmap)
         canvas.drawBitmap(bitmap, matrix, paint)
         currentLensFacing = lensFacing
         currentRotate = degrees
         for (face in faces) {
             val faceRect = getFaceRect(face, lensFacing)
+            val scaleFaceRect = Rect(
+                faceRect.left / ratio,
+                faceRect.top / ratio,
+                faceRect.right / ratio,
+                faceRect.bottom / ratio
+            )
             if (idHashMap.containsKey(face.trackingId) && idHashMap[face.trackingId] != -1) {
                 //已注册的tracking id
                 when (faceHashMap[idHashMap[face.trackingId]]) {
                     DrawStyles.BlUR.style -> {
-                        val scaleFaceRect = Rect(
-                            faceRect.left / ratio,
-                            faceRect.top / ratio,
-                            faceRect.right / ratio,
-                            faceRect.bottom / ratio
-                        )
                         canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
                     }
                     DrawStyles.BlACK.style -> {
@@ -106,8 +109,8 @@ class FaceDrawer(context: Context) {
                         )
                     }
                 }
-            } else {
-                //新出现或者未注册的tracking id
+            } else if (!idHashMap.containsKey(face.trackingId) || frameCount == 10) {
+                //新出现或者未注册的tracking id(间隔多帧查找检查未注册的id，防止性能损失过大）
                 val rotateFaceRect = getRotateRect(degrees, faceRect, lensFacing)
                 matrix.setRotate(degrees.toFloat())
                 if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
@@ -133,20 +136,19 @@ class FaceDrawer(context: Context) {
                     Log.d("tflite", "realFaceID: $realFaceID")
                     idHashMap[face.trackingId] = realFaceID
                 }
-                val scaleFaceRect = Rect(
-                    faceRect.left / ratio,
-                    faceRect.top / ratio,
-                    faceRect.right / ratio,
-                    faceRect.bottom / ratio
-                )
+                canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
+            } else {
                 canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
             }
+        }
+        if (frameCount++ > 10) {
+            frameCount = 0
         }
         canvas.save()
     }
 
     /** 注册人脸，并设定绘制风格 */
-    fun setFaceStyle(face: Face, style: Int, bitmap: Bitmap):Boolean {
+    fun setFaceStyle(face: Face, style: Int, bitmap: Bitmap): Boolean {
         val rotateFaceRect =
             getRotateRect(currentRotate, getFaceRect(face, currentLensFacing), currentLensFacing)
         val matrix = Matrix()
@@ -207,9 +209,9 @@ class FaceDrawer(context: Context) {
     private fun getFaceRect(face: Face, lensFacing: CameraSelector): Rect {
         return if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
             Rect(
-                1080 - face.boundingBox.right,
+                720 - face.boundingBox.right,
                 face.boundingBox.top,
-                1080 - face.boundingBox.left,
+                720 - face.boundingBox.left,
                 face.boundingBox.bottom
             )
         } else {
@@ -224,7 +226,7 @@ class FaceDrawer(context: Context) {
                 return if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA)
                     Rect(rect.top, rect.left, rect.bottom, rect.right)
                 else
-                    Rect(rect.top, 1080 - rect.right, rect.bottom, 1080 - rect.left)
+                    Rect(rect.top, 720 - rect.right, rect.bottom, 720 - rect.left)
             }
             180 -> {
                 return rect //待实现
@@ -232,13 +234,13 @@ class FaceDrawer(context: Context) {
             270 -> {
                 return if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA)
                     Rect(
-                        1920 - rect.bottom,
-                        1080 - rect.right,
-                        1920 - rect.top,
-                        1080 - rect.left
+                        1280 - rect.bottom,
+                        720 - rect.right,
+                        1280 - rect.top,
+                        720 - rect.left
                     )
                 else
-                    Rect(1920 - rect.bottom, rect.left, 1920 - rect.top, rect.right)
+                    Rect(1280 - rect.bottom, rect.left, 1280 - rect.top, rect.right)
             }
         }
         return rect
