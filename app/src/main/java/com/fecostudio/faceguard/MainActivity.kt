@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.media.MediaRecorder
 import android.media.MediaScannerConnection
@@ -52,6 +53,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     private lateinit var surfaceView: SurfaceView
     private var cameraProvider: ProcessCameraProvider? = null
     private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
+    private var rotationDegrees = 90
     private val executor = Executors.newSingleThreadExecutor()
 
     /** File where the recording will be saved */
@@ -154,6 +156,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
             val mediaImage = it.image
             if (mediaImage != null) {
                 val image = InputImage.fromMediaImage(mediaImage, it.imageInfo.rotationDegrees)
+                rotationDegrees = it.imageInfo.rotationDegrees
                 val task = detector.process(image)
                     .addOnSuccessListener { faces ->
                         faceList = faces
@@ -183,7 +186,8 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                     it.imageInfo.rotationDegrees
                 )//绘制人脸
                 surfaceView.holder.unlockCanvasAndPost(previewCanvas)
-                while (!task.isComplete){}
+                while (!task.isComplete) {
+                }
                 it.close()
                 Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
             }
@@ -269,8 +273,38 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                         Rect(face.boundingBox)
                     }
                     if (faceRect.contains(x.toInt(), y.toInt())) {
-                        val dialog = ChooseStyleFragment(bitmap!!, face)
-                        dialog.show(supportFragmentManager, "ChooseStyleFragment")
+                        val rotateFaceRect =
+                            FaceDrawer.getRotateRect(
+                                rotationDegrees,
+                                FaceDrawer.getFaceRect(face, lensFacing),
+                                lensFacing
+                            )
+                        if (Rect(
+                                0,
+                                0,
+                                bitmap!!.width,
+                                bitmap!!.height
+                            ).contains(rotateFaceRect)//判断是否在画面边缘
+                        ) {
+                            val matrix = Matrix()
+                            matrix.setRotate(rotationDegrees.toFloat())
+                            if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                                matrix.postScale(-1f, 1f)
+                            }
+                            val faceBitmap = Bitmap.createBitmap(
+                                bitmap!!,
+                                rotateFaceRect.left,
+                                rotateFaceRect.top,
+                                rotateFaceRect.width(),
+                                rotateFaceRect.height(),
+                                matrix,
+                                false
+                            )
+                            val dialog = ChooseStyleFragment(faceBitmap, face)
+                            dialog.show(supportFragmentManager, "ChooseStyleFragment")
+                        } else {
+                            Snackbar.make(surfaceView, R.string.failed_to_register, 3000).show()
+                        }
                     }
                 }
             }
@@ -279,10 +313,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     }
 
     //接受对话结果
-    override fun onDialogClick(bitmap: Bitmap, face: Face, which: Int) {
-        Log.d("touch", "onTouch: 选择了$which")
-        if (!faceDrawer.setFaceStyle(face, which, bitmap)) {
-            Snackbar.make(surfaceView, R.string.failed_to_register, 3000).show()
-        }
+    override fun onDialogClick(faceBitmap: Bitmap, face: Face, which: Int) {
+        faceDrawer.setFaceStyle(face, which, faceBitmap)
     }
 }

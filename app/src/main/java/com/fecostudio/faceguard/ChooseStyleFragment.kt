@@ -4,12 +4,14 @@ import android.app.Dialog
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.view.View
+import android.widget.ImageView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import com.google.mlkit.vision.face.Face
 
 
-class ChooseStyleFragment(private val bitmap: Bitmap, private val face: Face) : DialogFragment() {
+class ChooseStyleFragment(private val faceBitmap: Bitmap, private val face: Face) : DialogFragment() {
     private lateinit var listener: ChooseStyleListener
 
     interface ChooseStyleListener {
@@ -20,12 +22,17 @@ class ChooseStyleFragment(private val bitmap: Bitmap, private val face: Face) : 
         return activity?.let {
             // Use the Builder class for convenient dialog construction
             val builder = AlertDialog.Builder(it)
+            val inflater = requireActivity().layoutInflater
+            val dialogLayout: View = inflater.inflate(R.layout.fragment_style_dialog, null)
+            val imageView = dialogLayout.findViewById<ImageView>(R.id.preview_image)
+            imageView.setImageBitmap(faceBitmap)
+            builder.setView(dialogLayout)
             builder.setItems(
                 R.array.styles
             ) { _, which ->
                 // The 'which' argument contains the index position
                 // of the selected item
-                listener.onDialogClick(bitmap, face, which)
+                listener.onDialogClick(faceBitmap, face, which)
             }
             builder.create()
         } ?: throw IllegalStateException("Activity cannot be null")
