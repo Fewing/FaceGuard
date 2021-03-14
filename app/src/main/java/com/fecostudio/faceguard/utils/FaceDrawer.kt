@@ -137,12 +137,11 @@ class FaceDrawer(context: Context) {
                     idHashMap[face.trackingId] = realFaceID
                 }
                 canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
+                frameCount = 0
             } else {
+                frameCount ++
                 canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
             }
-        }
-        if (frameCount++ > 10) {
-            frameCount = 0
         }
         canvas.save()
     }
