@@ -11,9 +11,11 @@ android {
         applicationId "com.fecostudio.faceguard"
         minSdkVersion 26
         targetSdkVersion 30
-        versionCode 2
-        versionName "1.1.0"
-
+        versionCode 3
+        versionName "1.1.1"
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
