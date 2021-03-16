@@ -21,6 +21,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.animation.doOnCancel
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.DialogFragment
 import com.fecostudio.faceguard.utils.*
 import com.google.android.material.snackbar.Snackbar
 import com.google.mlkit.vision.common.InputImage
@@ -33,7 +34,7 @@ import java.util.*
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity(), View.OnTouchListener,
-    ChooseStyleFragment.ChooseStyleListener {
+    ChooseStyleFragment.ChooseStyleListener,PrivacyFragment.PrivacyDialogListener {
 
     companion object {
         const val REQUEST_CODE_PERMISSIONS = 10
@@ -90,7 +91,6 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         // YuvToRgb converter.
         converter = YuvToRgbConverter(this)
         faceDrawer = FaceDrawer(this)
-
         // Init views.
         surfaceView = findViewById(R.id.preview_surface_view)
         surfaceView.holder.addCallback(object : SurfaceHolder.Callback {
@@ -113,12 +113,11 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 //surfaceView.post { initializeCamera() }
             }
         })
+        if (!isPermissionsGranted()) {
+            PrivacyFragment().show(supportFragmentManager, "PrivacyFragment")
+        }
         surfaceView.setOnTouchListener(this)
         // Camera permission needed for CameraX.
-        requestPermissions(
-            arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
-            REQUEST_CODE_PERMISSIONS
-        )
         Snackbar.make(surfaceView, R.string.on_create_tip, 3000).show()
         // Init CameraX.
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
@@ -178,18 +177,20 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                     recorderSurface.unlockCanvasAndPost(recordCanvas)
                 }
                 val previewCanvas = surfaceView.holder.lockHardwareCanvas()//预览的画布
-                faceDrawer.drawFace(
-                    faceList,
-                    bitmap,
-                    previewCanvas,
-                    lensFacing,
-                    it.imageInfo.rotationDegrees
-                )//绘制人脸
-                surfaceView.holder.unlockCanvasAndPost(previewCanvas)
+                if (previewCanvas != null) {
+                    faceDrawer.drawFace(
+                        faceList,
+                        bitmap,
+                        previewCanvas,
+                        lensFacing,
+                        it.imageInfo.rotationDegrees
+                    )//绘制人脸
+                    surfaceView.holder.unlockCanvasAndPost(previewCanvas)
+                }
                 while (!task.isComplete) {
                 }
                 it.close()
-                Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
+                //Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
             }
         })
         cameraProvider!!.bindToLifecycle(this, lensFacing, imageAnalysis)
@@ -253,6 +254,16 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         startCameraIfReady()
     }
 
+    //用户同意隐私
+    override fun onDialogPositiveClick(dialog: DialogFragment) {
+        requestPermissions(
+            arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
+            REQUEST_CODE_PERMISSIONS
+        )
+        cameraProvider!!.unbindAll()
+        startCameraIfReady()
+    }
+
     //监听点击操作
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
@@ -312,8 +323,8 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         return true
     }
 
-    //接受对话结果
-    override fun onDialogClick(faceBitmap: Bitmap, face: Face, which: Int) {
-        faceDrawer.setFaceStyle(face, which, faceBitmap)
+    //接受样式选择结果
+    override fun onStyleDialogClick(bitmap: Bitmap, face: Face, which: Int) {
+        faceDrawer.setFaceStyle(face, which, bitmap)
     }
 }

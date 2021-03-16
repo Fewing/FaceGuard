@@ -15,7 +15,7 @@ class ChooseStyleFragment(private val faceBitmap: Bitmap, private val face: Face
     private lateinit var listener: ChooseStyleListener
 
     interface ChooseStyleListener {
-        fun onDialogClick(bitmap: Bitmap, face: Face, which: Int)
+        fun onStyleDialogClick(bitmap: Bitmap, face: Face, which: Int)
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -32,7 +32,7 @@ class ChooseStyleFragment(private val faceBitmap: Bitmap, private val face: Face
             ) { _, which ->
                 // The 'which' argument contains the index position
                 // of the selected item
-                listener.onDialogClick(faceBitmap, face, which)
+                listener.onStyleDialogClick(faceBitmap, face, which)
             }
             builder.create()
         } ?: throw IllegalStateException("Activity cannot be null")
