@@ -34,7 +34,7 @@ import java.util.*
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity(), View.OnTouchListener,
-    ChooseStyleFragment.ChooseStyleListener,PrivacyFragment.PrivacyDialogListener {
+    ChooseStyleFragment.ChooseStyleListener, PrivacyFragment.PrivacyDialogListener {
 
     companion object {
         const val REQUEST_CODE_PERMISSIONS = 10
@@ -72,8 +72,9 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     private var faceList: List<Face> = emptyList()
     private lateinit var faceDrawer: FaceDrawer
     private lateinit var recorderSurface: Surface
-    private val recorder: MediaRecorder by lazy { createRecorder() }
+    private lateinit var recorder: MediaRecorder
     private var isRecording = false
+    private var lastRecordClickTime = 0L
     private val captureButton: ImageButton by lazy { findViewById(R.id.capture_button) }
     private val animateRecord by lazy {
         ObjectAnimator.ofFloat(captureButton, View.ALPHA, 1f, 0.5f).apply {
@@ -197,21 +198,25 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     }
 
     fun startRecord(view: View) {
-        if (isRecording) {
-            recorder.stop()
-            recorder.release()
-            animateRecord.cancel()
-            MediaScannerConnection.scanFile(
-                view.context, arrayOf(outputFile.absolutePath), null, null
-            )
-            isRecording = false
-        } else {
-            recorder.prepare()
-            recorder.start()
-            animateRecord.start()
-            recorderSurface = recorder.surface
-            Log.d("record", "Recording started")
-            isRecording = true
+        if (System.currentTimeMillis() > lastRecordClickTime + 1000) {
+            lastRecordClickTime = System.currentTimeMillis()
+            if (isRecording) {
+                recorder.stop()
+                recorder.release()
+                animateRecord.cancel()
+                MediaScannerConnection.scanFile(
+                    view.context, arrayOf(outputFile.absolutePath), null, null
+                )
+                isRecording = false
+            } else {
+                recorder = createRecorder()
+                recorder.prepare()
+                recorder.start()
+                animateRecord.start()
+                recorderSurface = recorder.surface
+                Log.d("record", "Recording started")
+                isRecording = true
+            }
         }
     }
 
