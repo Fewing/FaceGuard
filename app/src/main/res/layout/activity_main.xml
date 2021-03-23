@@ -79,9 +79,9 @@
 
             <ImageButton
                 android:id="@+id/another_button"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@drawable/ic_switch"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/ic_baseline_help_outline_24"
                 android:contentDescription="@string/place_holder"
                 android:onClick="toAbout"
                 android:scaleType="fitCenter" />
