@@ -32,8 +32,6 @@ class FaceDrawer(context: Context) {
     private val ratio = 10
     private val radius = 4f
 
-    private var frameCount = 0
-
     private val faceRecognizer = FaceRecognizer(context)
 
     private var currentRotate = 90
@@ -109,8 +107,8 @@ class FaceDrawer(context: Context) {
                         )
                     }
                 }
-            } else if (!idHashMap.containsKey(face.trackingId) || frameCount == 10) {
-                //新出现或者未注册的tracking id(间隔多帧查找检查未注册的id，防止性能损失过大）
+            } else if (!idHashMap.containsKey(face.trackingId) || (0..8).random() == 8) {
+                //新出现或者未注册的tracking id(随机检查防止性能损失过大）
                 val rotateFaceRect = getRotateRect(degrees, faceRect, lensFacing)
                 matrix.setRotate(degrees.toFloat())
                 if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
@@ -137,9 +135,7 @@ class FaceDrawer(context: Context) {
                     idHashMap[face.trackingId] = realFaceID
                 }
                 canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
-                frameCount = 0
             } else {
-                frameCount ++
                 canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
             }
         }

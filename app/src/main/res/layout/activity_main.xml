@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright 2020 The Android Open Source Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,11 +13,10 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<FrameLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:background="@color/black"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/black">
 
     <SurfaceView
         android:id="@+id/preview_surface_view"
@@ -34,16 +32,18 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="128dp"
-        android:gravity="center"
-        android:background="#30000000"
         android:layout_gravity="bottom"
-        android:orientation="horizontal"
-        android:baselineAligned="false">
+        android:background="#30000000"
+        android:baselineAligned="false"
+        android:gravity="center"
+        android:orientation="horizontal">
+
         <LinearLayout
             android:layout_width="wrap_content"
-            android:gravity="center"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_height="match_parent">
+            android:gravity="center">
+
             <ImageButton
                 android:id="@+id/camera_switch_button"
                 android:layout_width="48dp"
@@ -53,11 +53,13 @@
                 android:onClick="switchCamera"
                 android:scaleType="fitCenter" />
         </LinearLayout>
+
         <LinearLayout
             android:layout_width="wrap_content"
-            android:gravity="center"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_height="match_parent">
+            android:gravity="center">
+
             <ImageButton
                 android:id="@+id/capture_button"
                 android:layout_width="72dp"
@@ -68,18 +70,21 @@
                 android:onClick="startRecord"
                 android:scaleType="fitCenter" />
         </LinearLayout>
+
         <LinearLayout
             android:layout_width="wrap_content"
-            android:gravity="center"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_height="match_parent">
+            android:gravity="center">
+
             <ImageButton
                 android:id="@+id/another_button"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:background="#00000000"
-                android:scaleType="fitCenter"
-                android:contentDescription="@string/place_holder" />
+                android:background="@drawable/ic_switch"
+                android:contentDescription="@string/place_holder"
+                android:onClick="toAbout"
+                android:scaleType="fitCenter" />
         </LinearLayout>
     </LinearLayout>
 

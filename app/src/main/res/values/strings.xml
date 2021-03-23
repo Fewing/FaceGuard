@@ -6,9 +6,14 @@
     <string name="on_create_tip">点击人脸可以选择绘制样式</string>
     <string name="failed_to_register">人脸在画面边缘，请重试</string>
     <string name="privacy_title">隐私和权限说明</string>
-    <string name="privacy_content">欢迎使用Face Guard，为了录制视频本应用会申请使用摄像头和录音权限。<br/>
-        本应用的实现基于Google MLKit离线人脸检测和TensorFlow Lite，不会使用网络连接，所有的计算、渲染均在本地设备上实现，因此我们不会也不能保存任何用户的隐私信息。<br/>
-        如果您仍不放心，可以在系统设置中禁止Face Guard连接网络，这不会影响Face Guard使用。如您无法接受请点击退出。</string>
+    <string name="privacy_content">欢迎使用Face Guard，为了录制视频本应用会申请使用摄像头和录音权限。<br />
+        本应用的实现基于Google MLKit离线人脸检测和TensorFlow Lite，不会使用网络连接，所有的计算、渲染均在本地设备上实现，因此我们不会也不能保存任何用户的隐私信息。<br />
+        您可以在系统设置中禁止Face Guard连接网络，这不会影响Face Guard使用。如您无法接受上述权限请点击退出。</string>
     <string name="privacy_agree">同意并继续</string>
     <string name="privacy_cancel">退出</string>
+    <string name="about">关于</string>
+    <string name="about_content">Face Guard是一个个性化视频流人脸隐私保护应用。你可以用它拍摄实时抹去人脸信息的视频。
+        本应用还支持个性化处理效果，可以为每个人脸选择不同的风格。
+        如果您使用时有任何疑问，可联系：yangzheyu00@hotmail.com</string>
+    <string name="privacy_link"><a href='https://bwh.fewings.xyz'>隐私协议</a></string>
 </resources>

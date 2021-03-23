@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
 
         /** Creates a [File] named with the current date and time */
         private fun createFile(context: Context): File {
-            val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.CHINA)
+            val sdf = SimpleDateFormat("yyyyMMdd_HH_mm_ss", Locale.CHINA)
             val appContext = context.applicationContext
             val mediaDir = context.externalMediaDirs.firstOrNull()?.let {
                 File(it, appContext.resources.getString(R.string.app_name)).apply { mkdirs() }
@@ -207,6 +207,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 MediaScannerConnection.scanFile(
                     view.context, arrayOf(outputFile.absolutePath), null, null
                 )
+                Snackbar.make(surfaceView, "视频已保存至" + outputFile.parent, 3000).show()
                 isRecording = false
             } else {
                 recorder = createRecorder()
@@ -257,6 +258,10 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         }
         cameraProvider!!.unbindAll()
         startCameraIfReady()
+    }
+
+    fun toAbout(view: View) {
+        AboutFragment().show(supportFragmentManager, "AboutFragment")
     }
 
     //用户同意隐私
