@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.fecostudio.faceguard"
-        minSdkVersion 26
+        minSdkVersion 24
         targetSdkVersion 30
         versionCode 6
         versionName "1.1.4"

@@ -177,7 +177,11 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                     )//绘制人脸
                     recorderSurface.unlockCanvasAndPost(recordCanvas)
                 }
-                val previewCanvas = surfaceView.holder.lockHardwareCanvas()//预览的画布
+                val previewCanvas = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    surfaceView.holder.lockHardwareCanvas()
+                } else {
+                    surfaceView.holder.lockCanvas()//兼容安卓8.0以下
+                }//预览的画布
                 if (previewCanvas != null) {
                     faceDrawer.drawFace(
                         faceList,

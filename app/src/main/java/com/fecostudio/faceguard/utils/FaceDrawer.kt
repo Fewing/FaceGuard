@@ -107,7 +107,7 @@ class FaceDrawer(context: Context) {
                         )
                     }
                 }
-            } else if (!idHashMap.containsKey(face.trackingId) || (0..8).random() == 8) {
+            } else if (!idHashMap.containsKey(face.trackingId) || (0..10).random() == 10) {
                 //新出现或者未注册的tracking id(随机检查防止性能损失过大）
                 val rotateFaceRect = getRotateRect(degrees, faceRect, lensFacing)
                 matrix.setRotate(degrees.toFloat())
