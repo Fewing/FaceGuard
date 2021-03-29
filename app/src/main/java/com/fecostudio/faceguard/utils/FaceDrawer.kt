@@ -77,6 +77,7 @@ class FaceDrawer(context: Context) {
         canvas.drawBitmap(bitmap, matrix, paint)
         currentLensFacing = lensFacing
         currentRotate = degrees
+        val unknownFaces: ArrayList<Face> = arrayListOf()
         for (face in faces) {
             val faceRect = getFaceRect(face, lensFacing)
             val scaleFaceRect = Rect(
@@ -107,8 +108,8 @@ class FaceDrawer(context: Context) {
                         )
                     }
                 }
-            } else if (!idHashMap.containsKey(face.trackingId) || (0..10).random() == 10) {
-                //新出现或者未注册的tracking id(随机检查防止性能损失过大）
+            } else if (!idHashMap.containsKey(face.trackingId)) {
+                //新出现的id
                 val rotateFaceRect = getRotateRect(degrees, faceRect, lensFacing)
                 matrix.setRotate(degrees.toFloat())
                 if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
@@ -131,12 +132,41 @@ class FaceDrawer(context: Context) {
                         false
                     )
                     val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
-                    Log.d("tflite", "realFaceID: $realFaceID")
                     idHashMap[face.trackingId] = realFaceID
                 }
                 canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
             } else {
+                //未确定的id
+                unknownFaces.add(face)
                 canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
+            }
+        }
+        //选取两个未确定的人脸
+        unknownFaces.shuffled().take(2).forEach { face ->
+            val faceRect = getFaceRect(face, lensFacing)
+            val rotateFaceRect = getRotateRect(degrees, faceRect, lensFacing)
+            matrix.setRotate(degrees.toFloat())
+            if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                matrix.postScale(-1f, 1f)
+            }
+            if (Rect(
+                    0,
+                    0,
+                    bitmap.width,
+                    bitmap.height
+                ).contains(rotateFaceRect)
+            ) {
+                val faceBitmap = Bitmap.createBitmap(
+                    bitmap,
+                    rotateFaceRect.left,
+                    rotateFaceRect.top,
+                    rotateFaceRect.width(),
+                    rotateFaceRect.height(),
+                    matrix,
+                    false
+                )
+                val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
+                idHashMap[face.trackingId] = realFaceID
             }
         }
         canvas.save()
