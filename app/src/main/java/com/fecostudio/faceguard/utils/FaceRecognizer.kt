@@ -39,14 +39,14 @@ class FaceRecognizer(context: Context) {
     }
 
     fun getNearestFace(bitmap: Bitmap): Int {
-        val tensorImage: TensorImage = loadImage(bitmap)
-        val probabilityBuffer =
-            TensorBuffer.createFixedSize(intArrayOf(1, 192), DataType.FLOAT32)
-        interpreter.run(tensorImage.buffer, probabilityBuffer.buffer)
-        val probabilityProcessor = TensorProcessor.Builder().build()
-        val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
         //和注册的人脸比对
         if (registered.size > 0) {
+            val tensorImage: TensorImage = loadImage(bitmap)
+            val probabilityBuffer =
+                TensorBuffer.createFixedSize(intArrayOf(1, 192), DataType.FLOAT32)
+            interpreter.run(tensorImage.buffer, probabilityBuffer.buffer)
+            val probabilityProcessor = TensorProcessor.Builder().build()
+            val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
             val nearest = findNearest(embeddings)
             Log.d("tflite", "size: ${registered.size}")
             return if (nearest != null && nearest.second < 0.9) {
