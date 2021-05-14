@@ -4,13 +4,17 @@ import android.Manifest
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.media.MediaRecorder
 import android.media.MediaScannerConnection
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
 import android.view.*
@@ -22,7 +26,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.animation.doOnCancel
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
-import com.fecostudio.faceguard.utils.*
+import com.fecostudio.faceguard.utils.FaceDrawer
+import com.fecostudio.faceguard.utils.YuvToRgbConverter
 import com.google.android.material.snackbar.Snackbar
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
@@ -32,6 +37,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.Executors
+
 
 class MainActivity : AppCompatActivity(), View.OnTouchListener,
     ChooseStyleFragment.ChooseStyleListener, PrivacyFragment.PrivacyDialogListener {
@@ -177,11 +183,12 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                     )//绘制人脸
                     recorderSurface.unlockCanvasAndPost(recordCanvas)
                 }
-                val previewCanvas = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    surfaceView.holder.lockHardwareCanvas()
-                } else {
-                    surfaceView.holder.lockCanvas()//兼容安卓8.0以下
-                }//预览的画布
+                val previewCanvas =
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        surfaceView.holder.lockHardwareCanvas()
+                    } else {
+                        surfaceView.holder.lockCanvas()//兼容安卓8.0以下
+                    }//预览的画布
                 if (previewCanvas != null) {
                     faceDrawer.drawFace(
                         faceList,
@@ -339,6 +346,27 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
 
     //接受样式选择结果
     override fun onStyleDialogClick(bitmap: Bitmap, face: Face, which: Int) {
+        //从图库选择图片
+        if (which == FaceDrawer.DrawStyles.Customize.style && FaceDrawer.DrawStyles.Customize.bitmap == null) {
+            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            startActivityForResult(intent, 1)
+        }
         faceDrawer.setFaceStyle(face, which, bitmap)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 1 && resultCode == RESULT_OK) {
+            val uri: Uri? = data?.data
+            bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(uri!!))
+            if (bitmap!!.width > 256) {
+                bitmap = Bitmap.createScaledBitmap(
+                    bitmap!!, 256,
+                    (bitmap!!.height * 256 / bitmap!!.width), false
+                )
+            }
+            FaceDrawer.DrawStyles.Customize.bitmap = bitmap
+            Log.d("uri", "onActivityResult: ${bitmap!!.height}")
+        }
     }
 }

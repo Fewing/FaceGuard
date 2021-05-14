@@ -20,7 +20,8 @@ class FaceDrawer(context: Context) {
         BlUR(1, null),
         BlACK(2, null),
         DOGE(3, null),
-        SMILE_BOY(4, null),
+        LaughingMan(4, null),
+        Customize(5, null),
     }
 
     private val faceHashMap: HashMap<Int?, Int> = HashMap() //真实人脸id对应的样式
@@ -34,14 +35,12 @@ class FaceDrawer(context: Context) {
 
     private val faceRecognizer = FaceRecognizer(context)
 
-    private var currentRotate = 90
-    private lateinit var currentLensFacing: CameraSelector
 
     init {
         var inputStream: InputStream = assetManager.open("picture/doge.png")
         DrawStyles.DOGE.bitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream = assetManager.open("picture/smileboy.png")
-        DrawStyles.SMILE_BOY.bitmap = BitmapFactory.decodeStream(inputStream)
+        inputStream = assetManager.open("picture/laughing_man.png")
+        DrawStyles.LaughingMan.bitmap = BitmapFactory.decodeStream(inputStream)
         faceHashMap[-1] = DrawStyles.BlUR.style
     }
 
@@ -54,13 +53,15 @@ class FaceDrawer(context: Context) {
     ) {
         val matrix = getRotateMatrix(degrees, bitmap)//用于绘制原图的matrix
         val scaleMatrix = Matrix()//用于绘制马赛克的matrix
-        scaleMatrix.postRotate(degrees.toFloat())
         val paint = Paint()
+        scaleMatrix.postRotate(degrees.toFloat())
         if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
             matrix.postScale(-1f, 1f)
             matrix.postTranslate(bitmap.height.toFloat(), 0f)
             scaleMatrix.postScale(-1f, 1f)
         }
+        canvas.drawBitmap(bitmap, matrix, paint)
+
         var scaledBitmap =
             Bitmap.createScaledBitmap(bitmap, bitmap.width / ratio, bitmap.height / ratio, false)
         scaledBitmap = Bitmap.createBitmap(
@@ -72,11 +73,8 @@ class FaceDrawer(context: Context) {
             scaleMatrix,
             false
         )
-
         blurBitmapByRender(scaledBitmap)
-        canvas.drawBitmap(bitmap, matrix, paint)
-        currentLensFacing = lensFacing
-        currentRotate = degrees
+
         val unknownFaces: ArrayList<Face> = arrayListOf()
         for (face in faces) {
             val faceRect = getFaceRect(face, lensFacing)
@@ -99,13 +97,23 @@ class FaceDrawer(context: Context) {
                     DrawStyles.DOGE.style -> {
                         canvas.drawBitmap(DrawStyles.DOGE.bitmap!!, null, faceRect, paint)
                     }
-                    DrawStyles.SMILE_BOY.style -> {
+                    DrawStyles.LaughingMan.style -> {
                         canvas.drawBitmap(
-                            DrawStyles.SMILE_BOY.bitmap!!,
+                            DrawStyles.LaughingMan.bitmap!!,
                             null,
                             faceRect,
                             paint
                         )
+                    }
+                    DrawStyles.Customize.style -> {
+                        if (DrawStyles.Customize.bitmap != null) {
+                            canvas.drawBitmap(
+                                DrawStyles.Customize.bitmap!!,
+                                null,
+                                faceRect,
+                                paint
+                            )
+                        }
                     }
                 }
             } else if (!idHashMap.containsKey(face.trackingId)) {
@@ -237,7 +245,7 @@ class FaceDrawer(context: Context) {
                         Rect(rect.top, 720 - rect.right, rect.bottom, 720 - rect.left)
                 }
                 180 -> {
-                    return rect //待实现
+                    return rect //Todo:实现180度旋转
                 }
                 270 -> {
                     return if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA)
