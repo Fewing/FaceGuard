@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: sparkfabrik/android-build-action@v1.3.4
       with:
-        project-path: android
+        project-path: .
         output-path: faceguard.apk
         ruby-version: "2.7.5"
         bundler-version: "2.3.26"    
