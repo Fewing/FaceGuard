@@ -17,6 +17,4 @@ jobs:
         project-path: android
         output-path: faceguard.apk
         ruby-version: "2.7.5"
-        bundler-version: "2.3.26"
-        fastlane-env: "debug"
-    
+        bundler-version: "2.3.26"    
