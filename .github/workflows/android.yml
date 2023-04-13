@@ -8,13 +8,30 @@ on:
 
 jobs:
   build:
-
+    name: Build
     runs-on: ubuntu-latest
-
     steps:
-    - uses: sparkfabrik/android-build-action@v1.3.4
-      with:
-        project-path: .
-        output-path: faceguard.apk
-        ruby-version: "2.7.5"
-        bundler-version: "2.3.26"    
+      - name: Checkout Repo
+        uses: actions/checkout@master
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v3
+        with:
+          java-version: 1.8
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+      - name: Build SampleApplication
+        run: ./gradlew --no-daemon build
+      - name: Build all artifacts
+        id: buildAllApks
+        uses: eskatos/gradle-command-action@v1.3.3
+        with:
+          gradle-version: current
+          wrapper-cache-enabled: true
+          dependencies-cache-enabled: true
+          configuration-cache-enabled: true
+          arguments: assembleRelease
+      - name: Archive Production Artifact
+        uses: actions/upload-artifact@master
+        with:
+          name: release
+          path: app/build/outputs/apk/ourbuildtype/release
