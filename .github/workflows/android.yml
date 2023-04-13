@@ -26,5 +26,5 @@ jobs:
     - name: Archive Production Artifact
       uses: actions/upload-artifact@master
       with:
-        name: release
-        path: app/build/outputs/apk/
+        name: app-debug.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
