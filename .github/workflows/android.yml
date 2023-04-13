@@ -8,30 +8,23 @@ on:
 
 jobs:
   build:
-    name: Build
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@master
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v3
-        with:
-          java-version: 1.8
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-      - name: Build SampleApplication
-        run: ./gradlew --no-daemon build
-      - name: Build all artifacts
-        id: buildAllApks
-        uses: eskatos/gradle-command-action@v1.3.3
-        with:
-          gradle-version: current
-          wrapper-cache-enabled: true
-          dependencies-cache-enabled: true
-          configuration-cache-enabled: true
-          arguments: assembleRelease
-      - name: Archive Production Artifact
-        uses: actions/upload-artifact@master
-        with:
-          name: release
-          path: app/build/outputs/apk/ourbuildtype/release
+    - uses: actions/checkout@v3
+    - name: set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: gradle
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Build with Gradle
+      run: ./gradlew build
+    - name: Archive Production Artifact
+      uses: actions/upload-artifact@master
+      with:
+        name: release
+        path: app/build/outputs/apk/
