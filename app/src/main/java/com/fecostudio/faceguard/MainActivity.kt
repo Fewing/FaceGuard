@@ -157,7 +157,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 .setTargetResolution(
                     Size(720, 1280)
                 ).build()
-        imageAnalysis.setAnalyzer(executor, {
+        imageAnalysis.setAnalyzer(executor) {
             val start = System.currentTimeMillis()
             val mediaImage = it.image
             if (mediaImage != null) {
@@ -204,7 +204,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 it.close()
                 //Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
             }
-        })
+        }
         cameraProvider!!.bindToLifecycle(this, lensFacing, imageAnalysis)
     }
 
