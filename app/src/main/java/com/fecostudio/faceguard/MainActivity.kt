@@ -13,6 +13,7 @@ import android.graphics.Rect
 import android.media.MediaRecorder
 import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
@@ -148,6 +149,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     }
 
     @SuppressLint("UnsafeExperimentalUsageError")
+    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
     private fun startCameraIfReady() {
         if (!isPermissionsGranted() || cameraProvider == null) {
             return
@@ -184,7 +186,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                     recorderSurface.unlockCanvasAndPost(recordCanvas)
                 }
                 val previewCanvas =
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         surfaceView.holder.lockHardwareCanvas()
                     } else {
                         surfaceView.holder.lockCanvas()//兼容安卓8.0以下
@@ -242,6 +244,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<String?>, grantResults: IntArray
     ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             startCameraIfReady()
         }
