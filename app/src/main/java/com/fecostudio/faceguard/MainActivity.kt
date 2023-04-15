@@ -261,7 +261,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         return false
     }
 
-    fun switchCamera(view: View) {
+    fun switchCamera() {
         lensFacing = if (lensFacing == CameraSelector.DEFAULT_BACK_CAMERA) {
             CameraSelector.DEFAULT_FRONT_CAMERA
         } else {
@@ -271,7 +271,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         startCameraIfReady()
     }
 
-    fun toAbout(view: View) {
+    fun toAbout() {
         AboutFragment().show(supportFragmentManager, "AboutFragment")
     }
 
