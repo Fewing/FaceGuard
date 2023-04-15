@@ -27,7 +27,7 @@ class PrivacyFragment : DialogFragment() {
                 R.string.privacy_cancel
             ) { _, _ ->
                 // 退出应用
-                activity!!.finish()
+                requireActivity().finish()
             }
             builder.create()
         } ?: throw IllegalStateException("Activity cannot be null")
