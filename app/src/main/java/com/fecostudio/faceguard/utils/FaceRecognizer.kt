@@ -6,6 +6,7 @@ import android.util.Log
 import android.util.Pair
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.gpu.CompatibilityList
 import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.common.TensorProcessor
@@ -23,7 +24,16 @@ class FaceRecognizer(context: Context) {
         context,
         "model/mobile_face_net.tflite"
     )
-    private val options = Interpreter.Options().addDelegate(GpuDelegate())
+    private val compatList = CompatibilityList()
+    private val options = Interpreter.Options().apply{
+        if(compatList.isDelegateSupportedOnThisDevice){
+            // if the device has a supported GPU, add the GPU delegate
+            this.addDelegate(GpuDelegate())
+        } else {
+            // if the GPU is not supported, run on 4 threads
+            this.numThreads = 4
+        }
+    }
     private val interpreter = Interpreter(model, options)
     private val registered: HashMap<Int, FloatArray> = HashMap<Int, FloatArray>()
 
@@ -60,6 +70,7 @@ class FaceRecognizer(context: Context) {
     }
 
     fun registerFace(bitmap: Bitmap, faceID: Int) {
+        val start = System.currentTimeMillis()
         val tensorImage: TensorImage = loadImage(bitmap)
         val probabilityBuffer =
             TensorBuffer.createFixedSize(intArrayOf(1, 192), DataType.FLOAT32)
@@ -67,6 +78,7 @@ class FaceRecognizer(context: Context) {
         val probabilityProcessor = TensorProcessor.Builder().build()
         val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
         registered[faceID] = embeddings
+        Log.d("tflite", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
     }
 
     //返回最接近的数据

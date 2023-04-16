@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.fecostudio.faceguard"
-        minSdkVersion 24
+        minSdkVersion 28
         targetSdkVersion 33
         versionCode 8
         versionName "1.2.0"
@@ -53,7 +53,8 @@ dependencies {
     implementation "androidx.camera:camera-lifecycle:${cameraX_version}"
     implementation 'com.google.mlkit:face-detection:16.1.5'
     // TensorFlow lite dependencies
-    implementation 'org.tensorflow:tensorflow-lite:2.4.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.4.0'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.1.0'
+    implementation 'org.tensorflow:tensorflow-lite:2.12.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.12.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
+    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.12.0'
 }
