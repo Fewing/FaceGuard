@@ -3,12 +3,9 @@ package com.fecostudio.faceguard.utils
 import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.*
-import android.renderscript.Allocation
-import android.renderscript.Element
-import android.renderscript.RenderScript
-import android.renderscript.ScriptIntrinsicBlur
 import android.util.Log
 import androidx.camera.core.CameraSelector
+import com.google.android.renderscript.Toolkit
 import com.google.mlkit.vision.face.Face
 import java.io.InputStream
 
@@ -27,11 +24,7 @@ class FaceDrawer(context: Context) {
     private val faceHashMap: HashMap<Int?, Int> = HashMap() //真实人脸id对应的样式
     private val idHashMap: HashMap<Int?, Int> = HashMap() //trackingID对应的真实人脸id
 
-    private val rs = RenderScript.create(context)
-    private val blurScript = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs))
-
     private val ratio = 10
-    private val radius = 4f
 
     private val faceRecognizer = FaceRecognizer(context)
 
@@ -73,7 +66,7 @@ class FaceDrawer(context: Context) {
             scaleMatrix,
             false
         )
-        blurBitmapByRender(scaledBitmap)
+        scaledBitmap = Toolkit.blur(scaledBitmap)
 
         val unknownFaces: ArrayList<Face> = arrayListOf()
         for (face in faces) {
@@ -192,14 +185,6 @@ class FaceDrawer(context: Context) {
             idHashMap[face.trackingId] = face.trackingId!!
             faceHashMap[face.trackingId] = style
         }
-    }
-
-    private fun blurBitmapByRender(bitmap: Bitmap) {
-        val allocation = Allocation.createFromBitmap(rs, bitmap)
-        blurScript.setInput(allocation)
-        blurScript.setRadius(radius)
-        blurScript.forEach(allocation)
-        //rs.finish()
     }
 
     companion object {

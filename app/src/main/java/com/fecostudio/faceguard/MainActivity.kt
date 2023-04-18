@@ -13,7 +13,6 @@ import android.graphics.Rect
 import android.media.MediaRecorder
 import android.media.MediaScannerConnection
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
@@ -46,6 +45,8 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     companion object {
         const val REQUEST_CODE_PERMISSIONS = 10
         private const val RECORDER_VIDEO_BITRATE: Int = 10_000_000
+        private const val videoWidth = 720
+        private const val videoHeight = 1280
 
         /** Creates a [File] named with the current date and time */
         private fun createFile(context: Context): File {
@@ -97,7 +98,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)   //保持屏幕常亮
         setContentView(R.layout.activity_main)
         // YuvToRgb converter.
-        converter = YuvToRgbConverter(this)
+        converter = YuvToRgbConverter()
         faceDrawer = FaceDrawer(this)
         // Init views.
         surfaceView = findViewById(R.id.preview_surface_view)
@@ -115,7 +116,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 // Selects appropriate preview size and configures view finder
                 Log.d("size", "Surface View size: ${surfaceView.width} x ${surfaceView.height}")
                 surfaceView.layoutParams.height = surfaceView.width * 16 / 9
-                holder.setFixedSize(720, 720 * 16 / 9)
+                holder.setFixedSize(videoWidth, videoWidth * 16 / 9)
 
                 // To ensure that size is set, initialize camera in the view's thread
                 //surfaceView.post { initializeCamera() }
@@ -143,7 +144,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         setOutputFile(outputFile.absolutePath)
         setVideoEncodingBitRate(RECORDER_VIDEO_BITRATE)
         setVideoFrameRate(30)
-        setVideoSize(720, 1280)
+        setVideoSize(videoWidth, videoHeight)
         setVideoEncoder(MediaRecorder.VideoEncoder.H264)
         setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
     }
@@ -157,7 +158,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         val imageAnalysis =
             ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setTargetResolution(
-                    Size(720, 1280)
+                    Size(videoWidth, videoHeight)
                 ).build()
         imageAnalysis.setAnalyzer(executor) {
             val start = System.currentTimeMillis()
@@ -172,13 +173,12 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                     .addOnFailureListener { e ->
                         Log.e("MLKit", "MLKit: " + e.localizedMessage)
                     }
-                val bitmap = allocateBitmapIfNecessary(it.width, it.height)
-                converter.yuvToRgb(it.image!!, bitmap)//获取bitmap
+                bitmap = converter.yuvToRgb(mediaImage)//获取bitmap
                 if (isRecording) {
                     val recordCanvas = recorderSurface.lockHardwareCanvas()//录制的画布
                     faceDrawer.drawFace(
                         faceList,
-                        bitmap,
+                        bitmap!!,
                         recordCanvas,
                         lensFacing,
                         it.imageInfo.rotationDegrees
@@ -186,15 +186,12 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                     recorderSurface.unlockCanvasAndPost(recordCanvas)
                 }
                 val previewCanvas =
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        surfaceView.holder.lockHardwareCanvas()
-                    } else {
-                        surfaceView.holder.lockCanvas()//兼容安卓8.0以下
-                    }//预览的画布
+                    surfaceView.holder.lockHardwareCanvas()
+                //预览的画布
                 if (previewCanvas != null) {
                     faceDrawer.drawFace(
                         faceList,
-                        bitmap,
+                        bitmap!!,
                         previewCanvas,
                         lensFacing,
                         it.imageInfo.rotationDegrees
@@ -204,7 +201,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 while (!task.isComplete) {
                 }
                 it.close()
-                //Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
+                Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
             }
         }
         cameraProvider!!.bindToLifecycle(this, lensFacing, imageAnalysis)
@@ -232,13 +229,6 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 isRecording = true
             }
         }
-    }
-
-    private fun allocateBitmapIfNecessary(width: Int, height: Int): Bitmap {
-        if (bitmap == null || bitmap!!.width != width || bitmap!!.height != height) {
-            bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        }
-        return bitmap!!
     }
 
     override fun onRequestPermissionsResult(
@@ -293,15 +283,15 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         if (event != null) {
             if (event.action == MotionEvent.ACTION_UP) {
-                val x = event.x * 720 / surfaceView.width
-                val y = event.y * 1280 / surfaceView.height
+                val x = event.x * videoWidth / surfaceView.width
+                val y = event.y * videoHeight / surfaceView.height
                 Log.d("touch", "onTouch: $x ,$y")
                 for (face in faceList) {
                     val faceRect = if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
                         Rect(
-                            720 - face.boundingBox.right,
+                            videoWidth - face.boundingBox.right,
                             face.boundingBox.top,
-                            720 - face.boundingBox.left,
+                            videoWidth - face.boundingBox.left,
                             face.boundingBox.bottom
                         )
                     } else {
@@ -361,11 +351,11 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 1 && resultCode == RESULT_OK) {
             val uri: Uri? = data?.data
-            bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(uri!!))
+            var bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(uri!!))
             if (bitmap!!.width > 256) {
                 bitmap = Bitmap.createScaledBitmap(
-                    bitmap!!, 256,
-                    (bitmap!!.height * 256 / bitmap!!.width), false
+                    bitmap, 256,
+                    (bitmap.height * 256 / bitmap.width), false
                 )
             }
             FaceDrawer.DrawStyles.Customize.bitmap = bitmap

@@ -16,19 +16,15 @@
 
 package com.fecostudio.faceguard.utils
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.media.Image
-import android.renderscript.Allocation
-import android.renderscript.Element
-import android.renderscript.RenderScript
-import android.renderscript.ScriptIntrinsicYuvToRGB
-import android.renderscript.Type
+import com.google.android.renderscript.Toolkit
+import com.google.android.renderscript.YuvFormat
 
 /**
- * Helper class used to efficiently convert a [Media.Image] object from
+ * Helper class used to efficiently convert a [Image] object from
  * [ImageFormat.YUV_420_888] format to an RGB [Bitmap] object.
  *
  * The [yuvToRgb] method is able to achieve the same FPS as the CameraX image
@@ -40,17 +36,12 @@ import android.renderscript.Type
  * since this is not an efficient camera pipeline due to the multiple copies
  * required to convert each frame.
  */
-class YuvToRgbConverter(context: Context) {
-    private val rs = RenderScript.create(context)
-    private val scriptYuvToRgb = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs))
-
+class YuvToRgbConverter {
     private var pixelCount: Int = -1
     private lateinit var yuvBuffer: ByteArray
-    private lateinit var inputAllocation: Allocation
-    private lateinit var outputAllocation: Allocation
 
     @Synchronized
-    fun yuvToRgb(image: Image, output: Bitmap) {
+    fun yuvToRgb(image: Image) :Bitmap{
 
         // Ensure that the intermediate output byte buffer is allocated
         if (!::yuvBuffer.isInitialized) {
@@ -63,22 +54,7 @@ class YuvToRgbConverter(context: Context) {
 
         // Get the YUV data in byte array form using NV21 format
         imageToByteArray(image, yuvBuffer)
-
-        // Ensure that the RenderScript inputs and outputs are allocated
-        if (!::inputAllocation.isInitialized) {
-            // Explicitly create an element with type NV21, since that's the pixel format we use
-            val elemType = Type.Builder(rs, Element.YUV(rs)).setYuvFormat(ImageFormat.NV21).create()
-            inputAllocation = Allocation.createSized(rs, elemType.element, yuvBuffer.size)
-        }
-        if (!::outputAllocation.isInitialized) {
-            outputAllocation = Allocation.createFromBitmap(rs, output)
-        }
-
-        // Convert NV21 format YUV to RGB
-        inputAllocation.copyFrom(yuvBuffer)
-        scriptYuvToRgb.setInput(inputAllocation)
-        scriptYuvToRgb.forEach(outputAllocation)
-        outputAllocation.copyTo(output)
+        return Toolkit.yuvToRgbBitmap(yuvBuffer,image.width,image.height,YuvFormat.NV21)
     }
 
     private fun imageToByteArray(image: Image, outputBuffer: ByteArray) {

@@ -18,7 +18,7 @@ class AboutFragment : DialogFragment() {
             val inflater = requireActivity().layoutInflater
             val aboutLayout: View = inflater.inflate(R.layout.fragment_about, null)
             val textView = aboutLayout.findViewById<TextView>(R.id.about_text)
-            textView.movementMethod = LinkMovementMethod.getInstance();
+            textView.movementMethod = LinkMovementMethod.getInstance()
             builder.setTitle(R.string.about)
             builder.setMessage(R.string.about_content)
             builder.setView(aboutLayout)
