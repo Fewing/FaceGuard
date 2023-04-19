@@ -201,7 +201,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 while (!task.isComplete) {
                 }
                 it.close()
-                Log.d("time", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
+                Log.d("time", "draw latency: ${System.currentTimeMillis() - start} ms")
             }
         }
         cameraProvider!!.bindToLifecycle(this, lensFacing, imageAnalysis)
