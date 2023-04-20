@@ -58,9 +58,9 @@ class FaceRecognizer(context: Context) {
             val probabilityProcessor = TensorProcessor.Builder().build()
             val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
             val nearest = findNearest(embeddings)
-            Log.d("tflite", "size: ${registered.size}")
+            Log.d("FaceRecognizer", "current registered size: ${registered.size}")
             return if (nearest != null && nearest.second < 0.9) {
-                Log.d("tflite", "distance: ${nearest.second}")
+                Log.d("FaceRecognizer", "getNearestFace distance: ${nearest.second}")
                 nearest.first
             } else {
                 -1
@@ -78,7 +78,7 @@ class FaceRecognizer(context: Context) {
         val probabilityProcessor = TensorProcessor.Builder().build()
         val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
         registered[faceID] = embeddings
-        Log.d("tflite", "startCameraIfReady: ${System.currentTimeMillis() - start} ms")
+        Log.d("FaceRecognizer", "tflite model latency: ${System.currentTimeMillis() - start} ms")
     }
 
     //返回最接近的数据

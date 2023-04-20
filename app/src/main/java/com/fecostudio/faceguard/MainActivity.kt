@@ -19,6 +19,7 @@ import android.util.Log
 import android.util.Size
 import android.view.*
 import android.widget.ImageButton
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -201,7 +202,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 while (!task.isComplete) {
                 }
                 it.close()
-                Log.d("time", "draw latency: ${System.currentTimeMillis() - start} ms")
+                Log.v("MainActivity", "draw latency: ${System.currentTimeMillis() - start} ms")
             }
         }
         cameraProvider!!.bindToLifecycle(this, lensFacing, imageAnalysis)
@@ -342,14 +343,15 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         //从图库选择图片
         if (which == FaceDrawer.DrawStyles.Customize.style && FaceDrawer.DrawStyles.Customize.bitmap == null) {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            startActivityForResult(intent, 1)
+            chooseImageResultLauncher.launch(intent)
         }
         faceDrawer.setFaceStyle(face, which, bitmap)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 1 && resultCode == RESULT_OK) {
+    private val chooseImageResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            // There are no request codes
+            val data: Intent? = result.data
             val uri: Uri? = data?.data
             var bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(uri!!))
             if (bitmap!!.width > 256) {
