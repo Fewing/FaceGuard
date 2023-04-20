@@ -6,7 +6,6 @@ import android.util.Log
 import android.util.Pair
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.gpu.CompatibilityList
 import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.common.TensorProcessor
@@ -24,15 +23,8 @@ class FaceRecognizer(context: Context) {
         context,
         "model/mobile_face_net.tflite"
     )
-    private val compatList = CompatibilityList()
     private val options = Interpreter.Options().apply {
-        if (compatList.isDelegateSupportedOnThisDevice) {
-            // if the device has a supported GPU, add the GPU delegate
-            this.addDelegate(GpuDelegate())
-        } else {
-            // if the GPU is not supported, run on 4 threads
-            this.numThreads = 4
-        }
+        this.addDelegate(GpuDelegate())
     }
     private val interpreter = Interpreter(model, options)
     private val registeredFaces =
@@ -78,6 +70,7 @@ class FaceRecognizer(context: Context) {
 
     fun getNearestFace(bitmap: Bitmap): Int {
         //和注册的人脸比对
+        val start = System.currentTimeMillis()
         if (registeredFaces.getInt("faceNumber", 0) > 0) {
             val tensorImage: TensorImage = loadImage(bitmap)
             val probabilityBuffer =
@@ -86,7 +79,14 @@ class FaceRecognizer(context: Context) {
             val probabilityProcessor = TensorProcessor.Builder().build()
             val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
             val nearest = findNearest(embeddings)
-            Log.d("FaceRecognizer", "current registered size: ${registeredFaces.getInt("faceNumber", 0)}")
+            Log.d(
+                "FaceRecognizer",
+                "current registered size: ${registeredFaces.getInt("faceNumber", 0)}"
+            )
+            Log.v(
+                "FaceRecognizer",
+                "tflite model latency: ${System.currentTimeMillis() - start} ms"
+            )
             return if (nearest != null && nearest.second < 0.9) {
                 Log.d("FaceRecognizer", "getNearestFace distance: ${nearest.second}")
                 nearest.first
@@ -97,7 +97,7 @@ class FaceRecognizer(context: Context) {
         return -1
     }
 
-    fun registerFace(bitmap: Bitmap) {
+    fun registerFace(bitmap: Bitmap): Int {
         val start = System.currentTimeMillis()
         val tensorImage: TensorImage = loadImage(bitmap)
         val probabilityBuffer =
@@ -110,21 +110,22 @@ class FaceRecognizer(context: Context) {
             putInt("", 1)
         }
 //        将人脸数据保存到键值对数据库
-        val faceID = registeredFaces.getInt("faceNumber",0)
+        val faceID = registeredFaces.getInt("faceNumber", 0)
         with(registeredFaces.edit()) {
             putInt("faceNumber", faceID + 1)
-            putString(faceID.toString(),embeddingsString)
+            putString(faceID.toString(), embeddingsString)
             apply()
         }
         Log.d("FaceRecognizer", "tflite model latency: ${System.currentTimeMillis() - start} ms")
         Log.d("FaceRecognizer", "face id: $faceID registered")
+        return faceID
     }
 
     //返回最接近的数据
     private fun findNearest(embeddings: FloatArray): Pair<Int, Float>? {
         var ret: Pair<Int, Float>? = null
-        for (id in 0 until registeredFaces.getInt("faceNumber",0)) {
-            val knownEmbString = registeredFaces.getString(id.toString(),"")
+        for (id in 0 until registeredFaces.getInt("faceNumber", 0)) {
+            val knownEmbString = registeredFaces.getString(id.toString(), "")
             val knownEmb = convertFromBase64Bytes(knownEmbString!!)
             var distance = 0f
             for (i in embeddings.indices) {

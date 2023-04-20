@@ -20,7 +20,8 @@ class FaceDrawer(context: Context) {
         LaughingMan(4, null),
         Customize(5, null),
     }
-//    用于保存每个人脸对应的特效
+
+    //    用于保存每个人脸对应的特效
     private val faceStyle =
         context.getSharedPreferences("faceStyle", Context.MODE_PRIVATE)
     private val idHashMap: HashMap<Int?, Int> = HashMap() //trackingID对应的真实人脸id
@@ -80,17 +81,20 @@ class FaceDrawer(context: Context) {
             )
             if (idHashMap.containsKey(face.trackingId) && idHashMap[face.trackingId] != -1) {
                 //已注册的tracking id
-                when (faceStyle.getInt(idHashMap[face.trackingId].toString(),-1)) {
+                when (faceStyle.getInt(idHashMap[face.trackingId].toString(), -1)) {
                     DrawStyles.BlUR.style -> {
                         canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
                     }
+
                     DrawStyles.BlACK.style -> {
                         paint.setARGB(255, 0, 0, 0)
                         canvas.drawRect(faceRect, paint)
                     }
+
                     DrawStyles.DOGE.style -> {
                         canvas.drawBitmap(DrawStyles.DOGE.bitmap!!, null, faceRect, paint)
                     }
+
                     DrawStyles.LaughingMan.style -> {
                         canvas.drawBitmap(
                             DrawStyles.LaughingMan.bitmap!!,
@@ -99,6 +103,7 @@ class FaceDrawer(context: Context) {
                             paint
                         )
                     }
+
                     DrawStyles.Customize.style -> {
                         if (DrawStyles.Customize.bitmap != null) {
                             canvas.drawBitmap(
@@ -110,35 +115,8 @@ class FaceDrawer(context: Context) {
                         }
                     }
                 }
-            } else if (!idHashMap.containsKey(face.trackingId)) {
-                //新出现的id
-                val rotateFaceRect = getRotateRect(degrees, faceRect, lensFacing)
-                matrix.setRotate(degrees.toFloat())
-                if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
-                    matrix.postScale(-1f, 1f)
-                }
-                if (Rect(
-                        0,
-                        0,
-                        bitmap.width,
-                        bitmap.height
-                    ).contains(rotateFaceRect)
-                ) {
-                    val faceBitmap = Bitmap.createBitmap(
-                        bitmap,
-                        rotateFaceRect.left,
-                        rotateFaceRect.top,
-                        rotateFaceRect.width(),
-                        rotateFaceRect.height(),
-                        matrix,
-                        false
-                    )
-                    val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
-                    idHashMap[face.trackingId] = realFaceID
-                }
-                canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
             } else {
-                //未确定的id
+                //未注册的id
                 unknownFaces.add(face)
                 canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
             }
@@ -177,18 +155,17 @@ class FaceDrawer(context: Context) {
     /** 注册人脸，并设定绘制风格 */
     fun setFaceStyle(face: Face, style: Int, faceBitmap: Bitmap) {
         val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
-        Log.d("tflite", "realFaceID: $realFaceID")
+        Log.d("FaceDrawer", "realFaceID: $realFaceID")
         if (realFaceID != -1) {
             idHashMap[face.trackingId] = realFaceID //有匹配的人脸
-            with(faceStyle.edit()){
-                putInt(realFaceID.toString(),style)
+            with(faceStyle.edit()) {
+                putInt(realFaceID.toString(), style)
                 apply()
             }
         } else {
-            faceRecognizer.registerFace(faceBitmap)//无匹配的人脸
-            idHashMap[face.trackingId] = face.trackingId!!
-            with(faceStyle.edit()){
-                putInt(realFaceID.toString(),style)
+            idHashMap[face.trackingId] = faceRecognizer.registerFace(faceBitmap)//无匹配的人脸
+            with(faceStyle.edit()) {
+                putInt(idHashMap[face.trackingId].toString(), style)
                 apply()
             }
         }
@@ -202,10 +179,12 @@ class FaceDrawer(context: Context) {
                     matrix.postRotate(90f)
                     matrix.postTranslate(bitmap.height.toFloat(), 0f)
                 }
+
                 180 -> {
                     matrix.postRotate(180f)
                     matrix.postTranslate(0f, bitmap.height.toFloat())
                 }
+
                 270 -> {
                     matrix.postRotate(270f)
                     matrix.postTranslate(0f, bitmap.width.toFloat())
@@ -236,9 +215,11 @@ class FaceDrawer(context: Context) {
                     else
                         Rect(rect.top, 720 - rect.right, rect.bottom, 720 - rect.left)
                 }
+
                 180 -> {
                     return rect //Todo:实现180度旋转
                 }
+
                 270 -> {
                     return if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA)
                         Rect(
