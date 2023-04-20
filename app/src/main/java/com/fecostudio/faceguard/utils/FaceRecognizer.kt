@@ -15,9 +15,9 @@ import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import java.nio.ByteBuffer
 import java.util.*
 import kotlin.math.sqrt
-
 
 class FaceRecognizer(context: Context) {
     private val model = FileUtil.loadMappedFile(
@@ -25,8 +25,8 @@ class FaceRecognizer(context: Context) {
         "model/mobile_face_net.tflite"
     )
     private val compatList = CompatibilityList()
-    private val options = Interpreter.Options().apply{
-        if(compatList.isDelegateSupportedOnThisDevice){
+    private val options = Interpreter.Options().apply {
+        if (compatList.isDelegateSupportedOnThisDevice) {
             // if the device has a supported GPU, add the GPU delegate
             this.addDelegate(GpuDelegate())
         } else {
@@ -35,7 +35,17 @@ class FaceRecognizer(context: Context) {
         }
     }
     private val interpreter = Interpreter(model, options)
-    private val registered: HashMap<Int, FloatArray> = HashMap<Int, FloatArray>()
+    private val registeredFaces =
+        context.getSharedPreferences("registeredFaces", Context.MODE_PRIVATE)
+
+    init {
+        if (!registeredFaces.contains("faceNumber")) {
+            with(registeredFaces.edit()) {
+                putInt("faceNumber", 0)
+                apply()
+            }
+        }
+    }
 
     private fun loadImage(bitmap: Bitmap): TensorImage {
         val imageProcessor = ImageProcessor.Builder()
@@ -48,9 +58,27 @@ class FaceRecognizer(context: Context) {
         return tensorImage
     }
 
+    private fun convertToBase64Bytes(floatArray: FloatArray): String {
+        val buff: ByteBuffer = ByteBuffer.allocate(4 * floatArray.size)
+        for (amplitude in floatArray) {
+            buff.putFloat(amplitude)
+        }
+        return Base64.getEncoder().encodeToString(buff.array())
+    }
+
+    private fun convertFromBase64Bytes(base64String: String): FloatArray {
+        val bytes = Base64.getDecoder().decode(base64String)
+        val buff = ByteBuffer.wrap(bytes)
+        val floatArray = FloatArray(bytes.size / 4)
+        for (i in floatArray.indices) {
+            floatArray[i] = buff.float
+        }
+        return floatArray
+    }
+
     fun getNearestFace(bitmap: Bitmap): Int {
         //和注册的人脸比对
-        if (registered.size > 0) {
+        if (registeredFaces.getInt("faceNumber", 0) > 0) {
             val tensorImage: TensorImage = loadImage(bitmap)
             val probabilityBuffer =
                 TensorBuffer.createFixedSize(intArrayOf(1, 192), DataType.FLOAT32)
@@ -58,7 +86,7 @@ class FaceRecognizer(context: Context) {
             val probabilityProcessor = TensorProcessor.Builder().build()
             val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
             val nearest = findNearest(embeddings)
-            Log.d("FaceRecognizer", "current registered size: ${registered.size}")
+            Log.d("FaceRecognizer", "current registered size: ${registeredFaces.getInt("faceNumber", 0)}")
             return if (nearest != null && nearest.second < 0.9) {
                 Log.d("FaceRecognizer", "getNearestFace distance: ${nearest.second}")
                 nearest.first
@@ -69,7 +97,7 @@ class FaceRecognizer(context: Context) {
         return -1
     }
 
-    fun registerFace(bitmap: Bitmap, faceID: Int) {
+    fun registerFace(bitmap: Bitmap) {
         val start = System.currentTimeMillis()
         val tensorImage: TensorImage = loadImage(bitmap)
         val probabilityBuffer =
@@ -77,14 +105,27 @@ class FaceRecognizer(context: Context) {
         interpreter.run(tensorImage.buffer, probabilityBuffer.buffer)
         val probabilityProcessor = TensorProcessor.Builder().build()
         val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
-        registered[faceID] = embeddings
+        val embeddingsString = convertToBase64Bytes(embeddings)
+        with(registeredFaces.edit()) {
+            putInt("", 1)
+        }
+//        将人脸数据保存到键值对数据库
+        val faceID = registeredFaces.getInt("faceNumber",0)
+        with(registeredFaces.edit()) {
+            putInt("faceNumber", faceID + 1)
+            putString(faceID.toString(),embeddingsString)
+            apply()
+        }
         Log.d("FaceRecognizer", "tflite model latency: ${System.currentTimeMillis() - start} ms")
+        Log.d("FaceRecognizer", "face id: $faceID registered")
     }
 
     //返回最接近的数据
     private fun findNearest(embeddings: FloatArray): Pair<Int, Float>? {
         var ret: Pair<Int, Float>? = null
-        for ((id, knownEmb) in registered) {
+        for (id in 0 until registeredFaces.getInt("faceNumber",0)) {
+            val knownEmbString = registeredFaces.getString(id.toString(),"")
+            val knownEmb = convertFromBase64Bytes(knownEmbString!!)
             var distance = 0f
             for (i in embeddings.indices) {
                 val diff = embeddings[i] - knownEmb[i]

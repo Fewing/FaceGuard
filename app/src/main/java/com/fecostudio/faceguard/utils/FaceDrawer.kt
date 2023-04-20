@@ -20,9 +20,11 @@ class FaceDrawer(context: Context) {
         LaughingMan(4, null),
         Customize(5, null),
     }
-
-    private val faceHashMap: HashMap<Int?, Int> = HashMap() //真实人脸id对应的样式
+//    用于保存每个人脸对应的特效
+    private val faceStyle =
+        context.getSharedPreferences("faceStyle", Context.MODE_PRIVATE)
     private val idHashMap: HashMap<Int?, Int> = HashMap() //trackingID对应的真实人脸id
+
 
     private val ratio = 10
 
@@ -34,7 +36,6 @@ class FaceDrawer(context: Context) {
         DrawStyles.DOGE.bitmap = BitmapFactory.decodeStream(inputStream)
         inputStream = assetManager.open("picture/laughing_man.png")
         DrawStyles.LaughingMan.bitmap = BitmapFactory.decodeStream(inputStream)
-        faceHashMap[-1] = DrawStyles.BlUR.style
     }
 
     fun drawFace(
@@ -79,7 +80,7 @@ class FaceDrawer(context: Context) {
             )
             if (idHashMap.containsKey(face.trackingId) && idHashMap[face.trackingId] != -1) {
                 //已注册的tracking id
-                when (faceHashMap[idHashMap[face.trackingId]]) {
+                when (faceStyle.getInt(idHashMap[face.trackingId].toString(),-1)) {
                     DrawStyles.BlUR.style -> {
                         canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
                     }
@@ -179,11 +180,17 @@ class FaceDrawer(context: Context) {
         Log.d("tflite", "realFaceID: $realFaceID")
         if (realFaceID != -1) {
             idHashMap[face.trackingId] = realFaceID //有匹配的人脸
-            faceHashMap[realFaceID] = style //设置新的效果
+            with(faceStyle.edit()){
+                putInt(realFaceID.toString(),style)
+                apply()
+            }
         } else {
-            faceRecognizer.registerFace(faceBitmap, face.trackingId!!)//无匹配的人脸
+            faceRecognizer.registerFace(faceBitmap)//无匹配的人脸
             idHashMap[face.trackingId] = face.trackingId!!
-            faceHashMap[face.trackingId] = style
+            with(faceStyle.edit()){
+                putInt(realFaceID.toString(),style)
+                apply()
+            }
         }
     }
 
