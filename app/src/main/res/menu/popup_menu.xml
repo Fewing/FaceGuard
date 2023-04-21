@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/face_manage"
+        android:onClick="toFaceManage"
+        android:title="@string/face_manage_menu"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/sticker_manage"
+        android:onClick="toStickerManage"
+        android:title="@string/sticker_manage_menu"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/privacy"
+        android:onClick="toAbout"
+        android:title="@string/privacy_manage_menu"
+        app:showAsAction="ifRoom" />
+</menu>

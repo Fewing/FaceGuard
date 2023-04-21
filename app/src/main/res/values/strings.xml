@@ -16,4 +16,7 @@
         本应用还支持个性化处理效果，可以为每个人脸选择不同的风格。
         如果您使用时有任何疑问，可联系：yangzheyu00@hotmail.com</string>
     <string name="privacy_link"><a href='https://bwh.fewings.xyz'>隐私协议</a></string>
+    <string name="face_manage_menu">人脸管理</string>
+    <string name="sticker_manage_menu">贴图管理</string>
+    <string name="privacy_manage_menu">数据隐私</string>
 </resources>

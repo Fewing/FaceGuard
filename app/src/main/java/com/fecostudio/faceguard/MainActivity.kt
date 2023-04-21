@@ -21,6 +21,7 @@ import android.view.*
 import android.widget.ImageButton
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -265,8 +266,20 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         startCameraIfReady()
     }
 
-    fun toAbout(view: View) {
+    fun showPopup(v: View) {
+        val popup = PopupMenu(this, v)
+        popup.inflate(R.menu.popup_menu)
+        popup.show()
+    }
+
+    fun toAbout(item: MenuItem) {
         AboutFragment().show(supportFragmentManager, "AboutFragment")
+    }
+    fun toFaceManage(item: MenuItem) {
+        AboutFragment().show(supportFragmentManager, "AboutFragment")
+    }
+    fun toStickerManage(item: MenuItem) {
+        StickerManageFragment().show(supportFragmentManager, "StickerManageFragment")
     }
 
     //用户同意隐私
@@ -348,20 +361,21 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         faceDrawer.setFaceStyle(face, which, bitmap)
     }
 
-    private val chooseImageResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            // There are no request codes
-            val data: Intent? = result.data
-            val uri: Uri? = data?.data
-            var bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(uri!!))
-            if (bitmap!!.width > 256) {
-                bitmap = Bitmap.createScaledBitmap(
-                    bitmap, 256,
-                    (bitmap.height * 256 / bitmap.width), false
-                )
+    private val chooseImageResultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                // There are no request codes
+                val data: Intent? = result.data
+                val uri: Uri? = data?.data
+                var bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(uri!!))
+                if (bitmap!!.width > 256) {
+                    bitmap = Bitmap.createScaledBitmap(
+                        bitmap, 256,
+                        (bitmap.height * 256 / bitmap.width), false
+                    )
+                }
+                FaceDrawer.DrawStyles.Customize.bitmap = bitmap
+                Log.d("uri", "onActivityResult: ${bitmap!!.height}")
             }
-            FaceDrawer.DrawStyles.Customize.bitmap = bitmap
-            Log.d("uri", "onActivityResult: ${bitmap!!.height}")
         }
-    }
 }

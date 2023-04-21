@@ -81,11 +81,12 @@
                 android:id="@+id/another_button"
                 android:layout_width="64dp"
                 android:layout_height="64dp"
-                android:background="@drawable/ic_baseline_help_outline_24"
+                android:background="@drawable/baseline_menu_24"
                 android:contentDescription="@string/place_holder"
-                android:onClick="toAbout"
+                android:onClick="showPopup"
                 android:scaleType="fitCenter" />
         </LinearLayout>
+
     </LinearLayout>
 
 </FrameLayout>
