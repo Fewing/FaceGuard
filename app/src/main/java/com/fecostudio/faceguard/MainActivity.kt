@@ -279,7 +279,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         AboutFragment().show(supportFragmentManager, "AboutFragment")
     }
     fun toStickerManage(item: MenuItem) {
-        StickerManageFragment(this).show(supportFragmentManager, "StickerManageFragment")
+        StickerManageFragment(this,faceDrawer).show(supportFragmentManager, "StickerManageFragment")
     }
 
     //用户同意隐私

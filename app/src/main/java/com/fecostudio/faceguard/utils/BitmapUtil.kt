@@ -29,13 +29,19 @@ class BitmapUtil {
             }
 
         }
-
-        fun loadAllBitmap(dirName: String, mContext: Context): ArrayList<Bitmap> {
+        fun removeBitmap(name: String, dirName: String, mContext: Context) {
             val targetPath = mContext.getDir(dirName, Context.MODE_PRIVATE)
-            val bitmaps = arrayListOf<Bitmap>()
+            val saveFile = File(targetPath, name)
+            saveFile.delete()
+            Log.d("Save Bitmap", "The picture is delete  $saveFile")
+        }
+
+        fun loadAllBitmap(dirName: String, mContext: Context): HashMap<String,Bitmap> {
+            val targetPath = mContext.getDir(dirName, Context.MODE_PRIVATE)
+            val bitmaps =  HashMap<String,Bitmap>()
             for (file in targetPath.listFiles()!!) {
                 val inputStream: InputStream = FileInputStream(file)
-                bitmaps.add(BitmapFactory.decodeStream(inputStream))
+                bitmaps[file.nameWithoutExtension] = BitmapFactory.decodeStream(inputStream)
             }
             Log.d("BitmapUtil", "bitmaps size:${bitmaps.size} ")
             return bitmaps

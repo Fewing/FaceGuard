@@ -20,23 +20,14 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
 import com.fecostudio.faceguard.utils.BitmapUtil
+import com.fecostudio.faceguard.utils.FaceDrawer
 import com.google.android.material.snackbar.Snackbar
-import java.io.InputStream
 
 
-class StickerManageFragment(private val context: Context) : DialogFragment() {
+class StickerManageFragment(private val context: Context, faceDrawer: FaceDrawer) :
+    DialogFragment() {
 
-    val bitmaps = arrayListOf<Bitmap>()
-    private fun loadBitmap() {
-        var inputStream: InputStream = context.assets.open("picture/add_picture.png")
-        bitmaps.add(BitmapFactory.decodeStream(inputStream))
-        inputStream = context.assets.open("picture/doge.png")
-        bitmaps.add(BitmapFactory.decodeStream(inputStream))
-        inputStream = context.assets.open("picture/laughing_man.png")
-        bitmaps.add(BitmapFactory.decodeStream(inputStream))
-        bitmaps += (BitmapUtil.loadAllBitmap("stickers", context))
-    }
-
+    private val stickerMap = faceDrawer.stickerMap
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         return activity?.let {
             // Use the Builder class for convenient dialog construction
@@ -54,23 +45,29 @@ class StickerManageFragment(private val context: Context) : DialogFragment() {
                             BitmapFactory.decodeStream(context.contentResolver.openInputStream(uri!!))
                         bitmap = Bitmap.createScaledBitmap(bitmap, 256, 256, true)
 //                        保存到内部空间
-                        BitmapUtil.saveBitmap("${System.currentTimeMillis()}.png", "stickers", bitmap, context)
+                        val filename = "${System.currentTimeMillis()}.png"
+                        stickerMap[filename] = bitmap
+                        BitmapUtil.saveBitmap(
+                            filename,
+                            "stickers",
+                            bitmap,
+                            context
+                        )
                         (gridView.adapter as BaseAdapter).notifyDataSetChanged()
                         Log.d("uri", "onActivityResult: ${bitmap!!.height}")
                     }
                 }
-            loadBitmap()
             gridView.adapter = object : BaseAdapter() {
                 override fun getCount(): Int {
-                    return bitmaps.size // 返回数据集的大小
+                    return stickerMap.size // 返回数据集的大小
                 }
 
                 override fun getItem(position: Int): Any {
-                    return bitmaps[position] // 返回指定位置的数据项
+                    return stickerMap.values.toList()[position] // 返回指定位置的数据项
                 }
 
                 override fun getItemId(position: Int): Long {
-                    return position.toLong() // 返回指定位置的数据项的 ID
+                    return stickerMap.keys.toList()[position].toLong() // 返回指定位置的数据项的 ID
                 }
 
                 override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
@@ -81,7 +78,7 @@ class StickerManageFragment(private val context: Context) : DialogFragment() {
                         false
                     ) // 如果 convertView 为空，则创建新的视图，否则复用旧的视图
                     val imageView = view.findViewById<ImageView>(R.id.image_view) // 获取 ImageView 组件
-                    imageView.setImageBitmap(bitmaps[position]) // 设置 bitmap 图片
+                    imageView.setImageBitmap(stickerMap.values.toList()[position]) // 设置 bitmap 图片
                     return view // 返回视图
                 }
 
@@ -96,9 +93,10 @@ class StickerManageFragment(private val context: Context) : DialogFragment() {
                     Snackbar.make(stickerManageLayout, "长按删除贴图", 3000).show()
                 }
             }
-            gridView.setOnItemLongClickListener { _, _, position, _ ->
+            gridView.setOnItemLongClickListener { _, _, position, id ->
                 if (position > 2) {
-                    bitmaps.remove(bitmaps[position])
+                    stickerMap.remove(id.toString())
+                    BitmapUtil.removeBitmap("$id.png", "stickers", context)
                     (gridView.adapter as BaseAdapter).notifyDataSetChanged()
                 } else if (position > 0) {
                     Snackbar.make(stickerManageLayout, "内置贴图无法删除", 3000).show()

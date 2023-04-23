@@ -31,12 +31,22 @@ class FaceDrawer(context: Context) {
 
     private val faceRecognizer = FaceRecognizer(context)
 
+    val stickerMap = LinkedHashMap<String, Bitmap>()
+
 
     init {
         var inputStream: InputStream = assetManager.open("picture/doge.png")
         DrawStyles.DOGE.bitmap = BitmapFactory.decodeStream(inputStream)
         inputStream = assetManager.open("picture/laughing_man.png")
         DrawStyles.LaughingMan.bitmap = BitmapFactory.decodeStream(inputStream)
+        inputStream = assetManager.open("picture/add_picture.png")
+        stickerMap["0"] = BitmapFactory.decodeStream(inputStream)
+        stickerMap["1"] = DrawStyles.DOGE.bitmap!!
+        stickerMap["2"] = DrawStyles.LaughingMan.bitmap!!
+        val temp = BitmapUtil.loadAllBitmap("stickers", context)
+        for (item in temp) {
+            stickerMap[item.key] = item.value
+        }
     }
 
     fun drawFace(
