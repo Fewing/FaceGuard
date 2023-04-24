@@ -276,7 +276,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
         AboutFragment().show(supportFragmentManager, "AboutFragment")
     }
     fun toFaceManage(item: MenuItem) {
-        AboutFragment().show(supportFragmentManager, "AboutFragment")
+        FaceManageFragment(this, faceDrawer).show(supportFragmentManager, "FaceManageFragment")
     }
     fun toStickerManage(item: MenuItem) {
         StickerManageFragment(this,faceDrawer).show(supportFragmentManager, "StickerManageFragment")

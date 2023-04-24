@@ -24,12 +24,12 @@ class FaceDrawer(context: Context) {
     //    用于保存每个人脸对应的特效
     private val faceStyle =
         context.getSharedPreferences("faceStyle", Context.MODE_PRIVATE)
-    private val idHashMap: HashMap<Int?, Int> = HashMap() //trackingID对应的真实人脸id
+    private val idHashMap: HashMap<Int?, Long> = HashMap() //trackingID对应的真实人脸id
 
 
     private val ratio = 10
 
-    private val faceRecognizer = FaceRecognizer(context)
+    val faceRecognizer = FaceRecognizer(context)
 
     val stickerMap = LinkedHashMap<String, Bitmap>()
 
@@ -89,9 +89,9 @@ class FaceDrawer(context: Context) {
                 faceRect.right / ratio,
                 faceRect.bottom / ratio
             )
-            if (idHashMap.containsKey(face.trackingId) && idHashMap[face.trackingId] != -1) {
+            if (idHashMap.containsKey(face.trackingId) && idHashMap[face.trackingId] != -1L) {
                 //已注册的tracking id
-                when (faceStyle.getInt(idHashMap[face.trackingId].toString(), -1)) {
+                when (faceStyle.getInt(idHashMap[face.trackingId].toString(), DrawStyles.BlUR.style)) {
                     DrawStyles.BlUR.style -> {
                         canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
                     }
@@ -166,7 +166,7 @@ class FaceDrawer(context: Context) {
     fun setFaceStyle(face: Face, style: Int, faceBitmap: Bitmap) {
         val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
         Log.d("FaceDrawer", "realFaceID: $realFaceID")
-        if (realFaceID != -1) {
+        if (realFaceID != -1L) {
             idHashMap[face.trackingId] = realFaceID //有匹配的人脸
             with(faceStyle.edit()) {
                 putInt(realFaceID.toString(), style)
@@ -179,6 +179,14 @@ class FaceDrawer(context: Context) {
                 apply()
             }
         }
+    }
+
+    fun removeFaceAndStyle(faceId: Long){
+        with(faceStyle.edit()){
+            remove(faceId.toString())
+            apply()
+        }
+        faceRecognizer.removeFace(faceId)
     }
 
     companion object {
