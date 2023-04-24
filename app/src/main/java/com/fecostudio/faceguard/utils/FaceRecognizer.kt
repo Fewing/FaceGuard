@@ -104,8 +104,9 @@ class FaceRecognizer(private val context: Context) {
         val embeddingsString = convertToBase64Bytes(embeddings)
 //        将人脸数据保存到键值对数据库，将人脸bitmap保存到本地存储
         val faceID = System.currentTimeMillis()
-        faceBitmapMap[faceID.toString()] = Bitmap.createScaledBitmap(bitmap, 256, 256, true)
-        BitmapUtil.saveBitmap("${faceID}.png", "faces", bitmap, context)
+        val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 256, 256, true)
+        faceBitmapMap[faceID.toString()] = scaledBitmap
+        BitmapUtil.saveBitmap("${faceID}.png", "faces", scaledBitmap, context)
         with(registeredFaces.edit()) {
             putString(faceID.toString(), embeddingsString)
             apply()

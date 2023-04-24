@@ -22,12 +22,21 @@ import androidx.fragment.app.DialogFragment
 import com.fecostudio.faceguard.utils.BitmapUtil
 import com.fecostudio.faceguard.utils.FaceDrawer
 import com.google.android.material.snackbar.Snackbar
+import com.google.mlkit.vision.face.Face
 
 
-class StickerManageFragment(private val context: Context, faceDrawer: FaceDrawer) :
+class StickerManageFragment(
+    private val context: Context,
+    private val faceDrawer: FaceDrawer,
+    private val chooseSticker: Boolean = false,
+    private val faceBitmap: Bitmap? = null,
+    private val face: Face? = null,
+) :
     DialogFragment() {
 
     private val stickerMap = faceDrawer.stickerMap
+    private val faceSticker =
+        context.getSharedPreferences("faceSticker", Context.MODE_PRIVATE)
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         return activity?.let {
             // Use the Builder class for convenient dialog construction
@@ -45,10 +54,10 @@ class StickerManageFragment(private val context: Context, faceDrawer: FaceDrawer
                             BitmapFactory.decodeStream(context.contentResolver.openInputStream(uri!!))
                         bitmap = Bitmap.createScaledBitmap(bitmap, 256, 256, true)
 //                        保存到内部空间
-                        val filename = "${System.currentTimeMillis()}.png"
+                        val filename = System.currentTimeMillis().toString()
                         stickerMap[filename] = bitmap
                         BitmapUtil.saveBitmap(
-                            filename,
+                            "$filename.png",
                             "stickers",
                             bitmap,
                             context
@@ -83,18 +92,30 @@ class StickerManageFragment(private val context: Context, faceDrawer: FaceDrawer
                 }
 
             }
-            gridView.setOnItemClickListener { _, _, position, _ ->
+            gridView.setOnItemClickListener { _, _, position, id ->
+                Log.d("StickerManageFragment", "isChooseSticker: $chooseSticker")
                 if (position == 0) {//添加贴图
                     val intent =
                         Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
                     chooseImageResultLauncher.launch(intent)
                     (gridView.adapter as BaseAdapter).notifyDataSetChanged()
                 } else {
-                    Snackbar.make(stickerManageLayout, "长按删除贴图", 3000).show()
+                    if (chooseSticker && faceBitmap != null && face != null) {//从贴图选择进入
+                        faceDrawer.setFaceStyle(
+                            face,
+                            FaceDrawer.DrawStyles.Sticker.style,
+                            faceBitmap,
+                            id
+                        )
+                        dismiss()
+                    } else {
+                        Snackbar.make(stickerManageLayout, "长按删除贴图", 3000).show()
+                    }
                 }
             }
             gridView.setOnItemLongClickListener { _, _, position, id ->
                 if (position > 2) {
+                    faceSticker.edit().remove(id.toString()).apply()
                     stickerMap.remove(id.toString())
                     BitmapUtil.removeBitmap("$id.png", "stickers", context)
                     (gridView.adapter as BaseAdapter).notifyDataSetChanged()

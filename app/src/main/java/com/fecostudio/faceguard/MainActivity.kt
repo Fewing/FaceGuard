@@ -4,22 +4,17 @@ import android.Manifest
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.media.MediaRecorder
 import android.media.MediaScannerConnection
-import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
 import android.view.*
 import android.widget.ImageButton
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.camera.core.CameraSelector
@@ -275,11 +270,16 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     fun toAbout(item: MenuItem) {
         AboutFragment().show(supportFragmentManager, "AboutFragment")
     }
+
     fun toFaceManage(item: MenuItem) {
         FaceManageFragment(this, faceDrawer).show(supportFragmentManager, "FaceManageFragment")
     }
+
     fun toStickerManage(item: MenuItem) {
-        StickerManageFragment(this,faceDrawer).show(supportFragmentManager, "StickerManageFragment")
+        StickerManageFragment(this, faceDrawer).show(
+            supportFragmentManager,
+            "StickerManageFragment"
+        )
     }
 
     //用户同意隐私
@@ -353,29 +353,13 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
 
     //接受样式选择结果
     override fun onStyleDialogClick(bitmap: Bitmap, face: Face, which: Int) {
-        //从图库选择图片
-        if (which == FaceDrawer.DrawStyles.Customize.style && FaceDrawer.DrawStyles.Customize.bitmap == null) {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            chooseImageResultLauncher.launch(intent)
+        if (which == FaceDrawer.DrawStyles.Sticker.style) {//进入贴图选择
+            StickerManageFragment(this, faceDrawer, true, face = face, faceBitmap = bitmap).show(
+                supportFragmentManager,
+                "StickerManageFragment"
+            )
+        } else {
+            faceDrawer.setFaceStyle(face, which, bitmap, 0)
         }
-        faceDrawer.setFaceStyle(face, which, bitmap)
     }
-
-    private val chooseImageResultLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                // There are no request codes
-                val data: Intent? = result.data
-                val uri: Uri? = data?.data
-                var bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(uri!!))
-                if (bitmap!!.width > 256) {
-                    bitmap = Bitmap.createScaledBitmap(
-                        bitmap, 256,
-                        (bitmap.height * 256 / bitmap.width), false
-                    )
-                }
-                FaceDrawer.DrawStyles.Customize.bitmap = bitmap
-                Log.d("uri", "onActivityResult: ${bitmap!!.height}")
-            }
-        }
 }

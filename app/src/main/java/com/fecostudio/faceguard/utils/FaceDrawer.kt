@@ -13,17 +13,20 @@ import java.io.InputStream
 class FaceDrawer(context: Context) {
     private val assetManager: AssetManager = context.assets
 
-    enum class DrawStyles(val style: Int, var bitmap: Bitmap?) {
-        BlUR(1, null),
-        BlACK(2, null),
-        DOGE(3, null),
-        LaughingMan(4, null),
-        Customize(5, null),
+    enum class DrawStyles(val style: Int) {
+        EMPTY(0),
+        BlUR(1),
+        BlACK(2),
+        Sticker(3),
     }
 
-    //    用于保存每个人脸对应的特效
+    //    保存每个人脸对应的特效
     private val faceStyle =
         context.getSharedPreferences("faceStyle", Context.MODE_PRIVATE)
+
+    //    保存每个人脸对应的贴图
+    private val faceSticker =
+        context.getSharedPreferences("faceSticker", Context.MODE_PRIVATE)
     private val idHashMap: HashMap<Int?, Long> = HashMap() //trackingID对应的真实人脸id
 
 
@@ -35,14 +38,12 @@ class FaceDrawer(context: Context) {
 
 
     init {
-        var inputStream: InputStream = assetManager.open("picture/doge.png")
-        DrawStyles.DOGE.bitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream = assetManager.open("picture/laughing_man.png")
-        DrawStyles.LaughingMan.bitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream = assetManager.open("picture/add_picture.png")
+        var inputStream: InputStream = assetManager.open("picture/add_picture.png")
         stickerMap["0"] = BitmapFactory.decodeStream(inputStream)
-        stickerMap["1"] = DrawStyles.DOGE.bitmap!!
-        stickerMap["2"] = DrawStyles.LaughingMan.bitmap!!
+        inputStream = assetManager.open("picture/doge.png")
+        stickerMap["1"] = BitmapFactory.decodeStream(inputStream)
+        inputStream = assetManager.open("picture/laughing_man.png")
+        stickerMap["2"] = BitmapFactory.decodeStream(inputStream)
         val temp = BitmapUtil.loadAllBitmap("stickers", context)
         for (item in temp) {
             stickerMap[item.key] = item.value
@@ -91,7 +92,12 @@ class FaceDrawer(context: Context) {
             )
             if (idHashMap.containsKey(face.trackingId) && idHashMap[face.trackingId] != -1L) {
                 //已注册的tracking id
-                when (faceStyle.getInt(idHashMap[face.trackingId].toString(), DrawStyles.BlUR.style)) {
+                when (faceStyle.getInt(
+                    idHashMap[face.trackingId].toString(),
+                    DrawStyles.BlUR.style
+                )) {
+                    DrawStyles.EMPTY.style -> {}
+
                     DrawStyles.BlUR.style -> {
                         canvas.drawBitmap(scaledBitmap, scaleFaceRect, faceRect, paint)
                     }
@@ -101,27 +107,25 @@ class FaceDrawer(context: Context) {
                         canvas.drawRect(faceRect, paint)
                     }
 
-                    DrawStyles.DOGE.style -> {
-                        canvas.drawBitmap(DrawStyles.DOGE.bitmap!!, null, faceRect, paint)
-                    }
-
-                    DrawStyles.LaughingMan.style -> {
-                        canvas.drawBitmap(
-                            DrawStyles.LaughingMan.bitmap!!,
-                            null,
-                            faceRect,
-                            paint
-                        )
-                    }
-
-                    DrawStyles.Customize.style -> {
-                        if (DrawStyles.Customize.bitmap != null) {
+                    DrawStyles.Sticker.style -> {
+                        val stickerID = faceSticker.getLong(
+                            idHashMap[face.trackingId].toString(),
+                            1
+                        ).toString()
+                        val sticker = stickerMap[stickerID]
+                        if (sticker != null) {
                             canvas.drawBitmap(
-                                DrawStyles.Customize.bitmap!!,
+                                sticker,
                                 null,
                                 faceRect,
                                 paint
                             )
+                        }else{
+                            with(faceSticker.edit()){
+                                putLong(idHashMap[face.trackingId].toString(), 1)
+                                apply()
+                            }
+
                         }
                     }
                 }
@@ -163,26 +167,37 @@ class FaceDrawer(context: Context) {
     }
 
     /** 注册人脸，并设定绘制风格 */
-    fun setFaceStyle(face: Face, style: Int, faceBitmap: Bitmap) {
+    fun setFaceStyle(face: Face, style: Int, faceBitmap: Bitmap, stickerId: Long) {
         val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
         Log.d("FaceDrawer", "realFaceID: $realFaceID")
-        if (realFaceID != -1L) {
-            idHashMap[face.trackingId] = realFaceID //有匹配的人脸
+        if (realFaceID != -1L) {//有匹配的人脸
+            idHashMap[face.trackingId] = realFaceID
             with(faceStyle.edit()) {
                 putInt(realFaceID.toString(), style)
                 apply()
             }
-        } else {
-            idHashMap[face.trackingId] = faceRecognizer.registerFace(faceBitmap)//无匹配的人脸
+        } else {//无匹配的人脸
+            idHashMap[face.trackingId] = faceRecognizer.registerFace(faceBitmap)
             with(faceStyle.edit()) {
                 putInt(idHashMap[face.trackingId].toString(), style)
                 apply()
             }
         }
+        if (style == DrawStyles.Sticker.style) {
+            with(faceSticker.edit()) {
+                putLong(idHashMap[face.trackingId].toString(), stickerId)
+                apply()
+            }
+        } else {
+            with(faceSticker.edit()) {
+                remove(idHashMap[face.trackingId].toString())
+                apply()
+            }
+        }
     }
 
-    fun removeFaceAndStyle(faceId: Long){
-        with(faceStyle.edit()){
+    fun removeFaceAndStyle(faceId: Long) {
+        with(faceStyle.edit()) {
             remove(faceId.toString())
             apply()
         }

@@ -6,5 +6,3 @@ Face Guard的所有计算和处理使用ML Kit 和TensorFlow Lite在本地进行
 链接：
 
 https://www.coolapk.com/apk/com.fecostudio.faceguard
-
-https://appgallery.huawei.com/#/app/C104053297

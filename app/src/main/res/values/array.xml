@@ -4,8 +4,6 @@
         <item>无</item>
         <item>马赛克</item>
         <item>纯色块</item>
-        <item>Doge</item>
-        <item>Laughing Man</item>
-        <item>自定义图片</item>
+        <item>贴图</item>
     </string-array>
 </resources>
