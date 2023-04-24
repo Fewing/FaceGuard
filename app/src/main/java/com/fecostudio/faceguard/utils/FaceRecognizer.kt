@@ -32,6 +32,7 @@ class FaceRecognizer(private val context: Context) {
     val faceBitmapMap = BitmapUtil.loadAllBitmap("faces", context)
 
     init {
+        Log.d("FaceDrawer", "faceBitmapMap: ${faceBitmapMap.size} face bitmap loaded ")
     }
 
     private fun loadImage(bitmap: Bitmap): TensorImage {
@@ -111,8 +112,8 @@ class FaceRecognizer(private val context: Context) {
             putString(faceID.toString(), embeddingsString)
             apply()
         }
-        Log.d("FaceRecognizer", "tflite model latency: ${System.currentTimeMillis() - start} ms")
-        Log.d("FaceRecognizer", "face id: $faceID registered")
+        Log.v("FaceRecognizer", "tflite model latency: ${System.currentTimeMillis() - start} ms")
+        Log.v("FaceRecognizer", "face id: $faceID registered")
         return faceID
     }
 

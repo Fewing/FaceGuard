@@ -48,6 +48,7 @@ class FaceDrawer(context: Context) {
         for (item in temp) {
             stickerMap[item.key] = item.value
         }
+        Log.d("FaceDrawer", "stickerMap: ${stickerMap.size} stickers loaded ")
     }
 
     fun drawFace(
@@ -120,8 +121,8 @@ class FaceDrawer(context: Context) {
                                 faceRect,
                                 paint
                             )
-                        }else{
-                            with(faceSticker.edit()){
+                        } else {
+                            with(faceSticker.edit()) {
                                 putLong(idHashMap[face.trackingId].toString(), 1)
                                 apply()
                             }
@@ -167,7 +168,7 @@ class FaceDrawer(context: Context) {
     }
 
     /** 注册人脸，并设定绘制风格 */
-    fun setFaceStyle(face: Face, style: Int, faceBitmap: Bitmap, stickerId: Long) {
+    fun setFaceStyle(face: Face, style: Int, faceBitmap: Bitmap, stickerId: Long = 1) {
         val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
         Log.d("FaceDrawer", "realFaceID: $realFaceID")
         if (realFaceID != -1L) {//有匹配的人脸
@@ -198,6 +199,10 @@ class FaceDrawer(context: Context) {
 
     fun removeFaceAndStyle(faceId: Long) {
         with(faceStyle.edit()) {
+            remove(faceId.toString())
+            apply()
+        }
+        with(faceSticker.edit()) {
             remove(faceId.toString())
             apply()
         }

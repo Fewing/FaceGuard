@@ -3,7 +3,6 @@ package com.fecostudio.faceguard.utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.util.Log
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -23,7 +22,6 @@ class BitmapUtil {
                 //存储完成后需要清除相关的进程
                 saveImgOut.flush()
                 saveImgOut.close()
-                Log.d("Save Bitmap", "The picture is save to $targetPath")
             } catch (ex: IOException) {
                 ex.printStackTrace()
             }
@@ -33,7 +31,6 @@ class BitmapUtil {
             val targetPath = mContext.getDir(dirName, Context.MODE_PRIVATE)
             val saveFile = File(targetPath, name)
             saveFile.delete()
-            Log.d("Save Bitmap", "The picture is delete  $saveFile")
         }
 
         fun loadAllBitmap(dirName: String, mContext: Context): HashMap<String,Bitmap> {
@@ -43,7 +40,6 @@ class BitmapUtil {
                 val inputStream: InputStream = FileInputStream(file)
                 bitmaps[file.nameWithoutExtension] = BitmapFactory.decodeStream(inputStream)
             }
-            Log.d("BitmapUtil", "bitmaps size:${bitmaps.size} ")
             return bitmaps
         }
     }

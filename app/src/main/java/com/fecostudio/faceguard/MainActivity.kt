@@ -359,7 +359,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
                 "StickerManageFragment"
             )
         } else {
-            faceDrawer.setFaceStyle(face, which, bitmap, 0)
+            faceDrawer.setFaceStyle(face, which, bitmap)
         }
     }
 }
