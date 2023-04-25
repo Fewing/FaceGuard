@@ -6,7 +6,6 @@ import android.util.Log
 import android.util.Pair
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.common.TensorProcessor
 import org.tensorflow.lite.support.common.ops.NormalizeOp
@@ -21,10 +20,10 @@ import kotlin.math.sqrt
 class FaceRecognizer(private val context: Context) {
     private val model = FileUtil.loadMappedFile(
         context,
-        "model/mobile_face_net.tflite"
+        "model/model.tflite"
     )
     private val options = Interpreter.Options().apply {
-        this.addDelegate(GpuDelegate())
+        this.numThreads = 4
     }
     private val interpreter = Interpreter(model, options)
     private val registeredFaces =
@@ -71,7 +70,7 @@ class FaceRecognizer(private val context: Context) {
         if (faceMap.isNotEmpty()) {
             val tensorImage: TensorImage = loadImage(bitmap)
             val probabilityBuffer =
-                TensorBuffer.createFixedSize(intArrayOf(1, 192), DataType.FLOAT32)
+                TensorBuffer.createFixedSize(intArrayOf(1, 512), DataType.FLOAT32)
             interpreter.run(tensorImage.buffer, probabilityBuffer.buffer)
             val probabilityProcessor = TensorProcessor.Builder().build()
             val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
@@ -80,11 +79,11 @@ class FaceRecognizer(private val context: Context) {
                 "FaceRecognizer",
                 "current registered size: ${faceMap.size}"
             )
-            Log.v(
+            Log.d(
                 "FaceRecognizer",
                 "tflite model latency: ${System.currentTimeMillis() - start} ms"
             )
-            return if (nearest != null && nearest.second < 0.9) {
+            return if (nearest != null && nearest.second < 0.8) {
                 Log.d("FaceRecognizer", "getNearestFace distance: ${nearest.second}")
                 nearest.first
             } else {
@@ -98,7 +97,7 @@ class FaceRecognizer(private val context: Context) {
         val start = System.currentTimeMillis()
         val tensorImage: TensorImage = loadImage(bitmap)
         val probabilityBuffer =
-            TensorBuffer.createFixedSize(intArrayOf(1, 192), DataType.FLOAT32)
+            TensorBuffer.createFixedSize(intArrayOf(1, 512), DataType.FLOAT32)
         interpreter.run(tensorImage.buffer, probabilityBuffer.buffer)
         val probabilityProcessor = TensorProcessor.Builder().build()
         val embeddings = probabilityProcessor.process(probabilityBuffer).floatArray
@@ -139,6 +138,7 @@ class FaceRecognizer(private val context: Context) {
             if (ret == null || distance < ret.second) {
                 ret = Pair(id.toLong(), distance)
             }
+            Log.d("FaceRecognizer", "findNearest: distance $distance ")
         }
         return ret
     }
