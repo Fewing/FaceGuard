@@ -160,7 +160,7 @@ class FaceDrawer(context: Context) {
                     matrix,
                     false
                 )
-                val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
+                val realFaceID = faceRecognizer.getNearestFace(faceBitmap, 0.7)
                 idHashMap[face.trackingId] = realFaceID
             }
         }
@@ -169,7 +169,7 @@ class FaceDrawer(context: Context) {
 
     /** 注册人脸，并设定绘制风格 */
     fun setFaceStyle(face: Face, style: Int, faceBitmap: Bitmap, stickerId: Long = 1) {
-        val realFaceID = faceRecognizer.getNearestFace(faceBitmap)
+        val realFaceID = faceRecognizer.getNearestFace(faceBitmap,0.9)
         Log.d("FaceDrawer", "realFaceID: $realFaceID")
         if (realFaceID != -1L) {//有匹配的人脸
             idHashMap[face.trackingId] = realFaceID

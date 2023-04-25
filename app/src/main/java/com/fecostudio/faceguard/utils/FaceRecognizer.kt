@@ -63,7 +63,7 @@ class FaceRecognizer(private val context: Context) {
         return floatArray
     }
 
-    fun getNearestFace(bitmap: Bitmap): Long {
+    fun getNearestFace(bitmap: Bitmap, threshold: Double): Long {
         //和注册的人脸比对
         val start = System.currentTimeMillis()
         val faceMap = registeredFaces.all
@@ -83,7 +83,7 @@ class FaceRecognizer(private val context: Context) {
                 "FaceRecognizer",
                 "tflite model latency: ${System.currentTimeMillis() - start} ms"
             )
-            return if (nearest != null && nearest.second < 0.8) {
+            return if (nearest != null && nearest.second < threshold) {
                 Log.d("FaceRecognizer", "getNearestFace distance: ${nearest.second}")
                 nearest.first
             } else {
