@@ -19,4 +19,5 @@
     <string name="face_manage_menu">人脸管理</string>
     <string name="sticker_manage_menu">贴图管理</string>
     <string name="privacy_manage_menu">数据隐私</string>
+    <string name="clear_data">数据管理</string>
 </resources>

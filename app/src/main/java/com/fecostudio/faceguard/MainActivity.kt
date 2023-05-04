@@ -268,7 +268,7 @@ class MainActivity : AppCompatActivity(), View.OnTouchListener,
     }
 
     fun toAbout(item: MenuItem) {
-        AboutFragment().show(supportFragmentManager, "AboutFragment")
+        AboutFragment(this).show(supportFragmentManager, "AboutFragment")
     }
 
     fun toFaceManage(item: MenuItem) {
