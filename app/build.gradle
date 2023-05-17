@@ -32,6 +32,9 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    androidResources {
+        noCompress 'tflite'
+    }
     namespace 'com.fecostudio.faceguard'
 }
 
