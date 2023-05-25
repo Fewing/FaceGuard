@@ -37,6 +37,7 @@ class StickerManageFragment(
     private val stickerMap = faceDrawer.stickerMap
     private val faceSticker =
         context.getSharedPreferences("faceSticker", Context.MODE_PRIVATE)
+
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         return activity?.let {
             // Use the Builder class for convenient dialog construction
@@ -52,7 +53,12 @@ class StickerManageFragment(
                         val uri: Uri? = data?.data
                         var bitmap =
                             BitmapFactory.decodeStream(context.contentResolver.openInputStream(uri!!))
-                        bitmap = Bitmap.createScaledBitmap(bitmap, 256, 256, true)
+                        bitmap = Bitmap.createScaledBitmap(
+                            bitmap,
+                            512,
+                            bitmap.height * 512 / bitmap.width,
+                            true
+                        )
 //                        保存到内部空间
                         val filename = System.currentTimeMillis().toString()
                         stickerMap[filename] = bitmap
@@ -87,7 +93,13 @@ class StickerManageFragment(
                         false
                     ) // 如果 convertView 为空，则创建新的视图，否则复用旧的视图
                     val imageView = view.findViewById<ImageView>(R.id.image_view) // 获取 ImageView 组件
-                    imageView.setImageBitmap(stickerMap.values.toList()[position]) // 设置 bitmap 图片
+                    val scaledBitmap = Bitmap.createScaledBitmap(
+                        stickerMap.values.toList()[position],
+                        256,
+                        256,
+                        true
+                    )
+                    imageView.setImageBitmap(scaledBitmap) // 设置 bitmap 图片
                     return view // 返回视图
                 }
 

@@ -114,13 +114,26 @@ class FaceDrawer(context: Context) {
                             1
                         ).toString()
                         val sticker = stickerMap[stickerID]
+                        val stickerRect = Rect(faceRect)
                         if (sticker != null) {
+                            if (sticker.width > sticker.height) {
+                                val stickerRectWidth =
+                                    faceRect.width() * sticker.width / sticker.height
+                                stickerRect.left = faceRect.centerX() - stickerRectWidth / 2
+                                stickerRect.right = faceRect.centerX() + stickerRectWidth / 2
+                            } else {
+                                val stickerRectHeight =
+                                    faceRect.height() * sticker.height / sticker.width
+                                stickerRect.top = faceRect.centerY() - stickerRectHeight / 2
+                                stickerRect.bottom = faceRect.centerY() + stickerRectHeight / 2
+                            }
                             canvas.drawBitmap(
                                 sticker,
                                 null,
-                                faceRect,
+                                stickerRect,
                                 paint
                             )
+
                         } else {
                             with(faceSticker.edit()) {
                                 putLong(idHashMap[face.trackingId].toString(), 1)
@@ -169,7 +182,7 @@ class FaceDrawer(context: Context) {
 
     /** 注册人脸，并设定绘制风格 */
     fun setFaceStyle(face: Face, style: Int, faceBitmap: Bitmap, stickerId: Long = 1) {
-        val realFaceID = faceRecognizer.getNearestFace(faceBitmap,0.9,true)
+        val realFaceID = faceRecognizer.getNearestFace(faceBitmap, 0.9, true)
         Log.d("FaceDrawer", "setFaceStyle realFaceID: $realFaceID")
         if (realFaceID != -1L) {//有匹配的人脸
             idHashMap[face.trackingId] = realFaceID

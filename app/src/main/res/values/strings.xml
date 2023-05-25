@@ -15,7 +15,7 @@
     <string name="about_content">Face Guard是一个个性化视频流人脸隐私保护应用。你可以用它拍摄实时抹去人脸信息的视频。
         本应用还支持个性化处理效果，可以为每个人脸选择不同的风格。
         如果您使用时有任何疑问，可联系：yangzheyu00@hotmail.com</string>
-    <string name="privacy_link"><a href='https://bwh.auwings.com'>隐私协议</a></string>
+    <string name="privacy_link"><a href='https://fewing.github.io/FaceGuard/'>隐私协议</a></string>
     <string name="face_manage_menu">人脸管理</string>
     <string name="sticker_manage_menu">贴图管理</string>
     <string name="privacy_manage_menu">关于</string>
