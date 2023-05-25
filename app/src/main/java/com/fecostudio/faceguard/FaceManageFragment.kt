@@ -27,6 +27,9 @@ class FaceManageFragment(private val context: Context,private val faceDrawer: Fa
             val inflater = requireActivity().layoutInflater
             val stickerManageLayout: View = inflater.inflate(R.layout.fragment_face_manage, null)
             val gridView = stickerManageLayout.findViewById<GridView>(R.id.sticker_grid)
+            if (faceMap.size == 0){
+                Snackbar.make(stickerManageLayout, "您还未添加任何人脸", 3000).show()
+            }
             gridView.adapter = object : BaseAdapter() {
                 override fun getCount(): Int {
                     return faceMap.size // 返回数据集的大小
